@@ -7,8 +7,8 @@ Follow these steps once before your first lab session. You only need to do this 
 ## 1. Clone the repository
 
 ```bash
-git clone https://github.com/karthikasturi/building_with_claude.git
-cd building_with_claude
+git clone https://github.com/ITC-AI-TRAINING/building-with-claude.git
+cd building-with-claude
 ```
 
 ---
