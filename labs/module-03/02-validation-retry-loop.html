@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Validation Retry Loop | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --badge:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--badge); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .picker{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px}
+  .pick-chip{background:var(--surface2); border:1px solid var(--border); border-radius:99px;
+             padding:7px 14px; font-size:.8rem; cursor:pointer; color:var(--text-dim); transition:all .15s}
+  .pick-chip:hover{border-color:var(--teal-lite)}
+  .pick-chip.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--text)}
+  .pick-chip.active.unrecoverable{background:var(--red-bg); border-color:rgba(239,83,80,.4); color:var(--red)}
+
+  .flow-track{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px}
+  .flow-node{flex:1; min-width:100px; text-align:center; padding:10px 8px; border-radius:8px;
+             background:var(--surface2); border:1px solid var(--border); font-size:.72rem; color:var(--text-dim);
+             cursor:pointer; transition:all .2s}
+  .flow-node .n{display:block; font-weight:700; font-size:.9rem; color:var(--text); margin-bottom:2px}
+  .flow-node.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .flow-node.active .n{color:var(--teal-lite)}
+  .flow-node.done{opacity:.55}
+  .flow-node.fail{border-color:rgba(239,83,80,.5)}
+  .flow-node.fail.active{background:var(--red-bg); border-color:var(--red); color:var(--red)}
+  .flow-node.fail.active .n{color:var(--red)}
+  .flow-detail{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:18px; margin-top:8px}
+  .flow-detail h3{font-size:.95rem; margin-bottom:8px; color:var(--teal-lite)}
+  .flow-detail.fail h3{color:var(--red)}
+  .flow-detail p{font-size:.83rem; color:var(--text-dim); margin-bottom:12px}
+  .flow-controls{display:flex; gap:10px; margin-top:16px; align-items:center}
+  .flow-progress{font-size:.76rem; color:var(--text-muted); margin-left:auto}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 3</span>
+      <div>
+        <h1>Validation Retry Loop</h1>
+        <p>Building with Claude — retries fix a model mistake, never a missing input</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> Step through <code>day2/loan_application_extractor.py</code>'s
+    retry loop for two different failures — one Claude can fix on a second attempt, one it can't,
+    no matter how many retries you allow. Fully offline and scripted — nothing sends a real request.
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Pick a scenario</h2></div>
+    <div class="picker" id="picker"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Step through the retry loop</h2></div>
+    <p class="sec-sub" id="scenario-sub"></p>
+
+    <div class="card">
+      <div class="flow-track" id="flow-track"></div>
+      <div class="flow-detail" id="flow-detail-wrap">
+        <h3 id="flow-title"></h3>
+        <p id="flow-explain"></p>
+        <pre class="code" id="flow-code"></pre>
+      </div>
+      <div class="flow-controls">
+        <button class="btn secondary" id="flow-prev" onclick="flowStep(-1)">← Prev</button>
+        <button class="btn" id="flow-next" onclick="flowStep(1)">Next →</button>
+        <span class="flow-progress" id="flow-progress"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-03-structured-outputs-and-validation.md">Module 3 — Structured
+  Outputs and Validation</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  const SCENARIOS = {
+    recoverable: {
+      label: 'Recoverable — ambiguous tenure',
+      sub: '"...expand my shop, around 12 lakhs... pay back in 4-5 years." — a range instead of a single integer.',
+      steps: [
+        {
+          label: 'Send', title: '1 · Attempt 1 — send the request', fail: false,
+          explain: 'The raw application text goes in as the only user message.',
+          code: 'messages = [{"role": "user", "content":\n  "Extract the loan application fields from: \'...4-5 years.\'"}]',
+        },
+        {
+          label: 'Fails', title: '2 · Attempt 1 — ValidationError', fail: true,
+          explain: 'Claude returned tenure_years as the string "4-5" — not a single integer.',
+          code: 'ValidationError: 1 validation error for LoanApplicationRecord\ntenure_years\n  Input should be a valid integer\n  [type=int_parsing, input_value=\'4-5\', input_type=str]',
+        },
+        {
+          label: 'Retry msg', title: '3 · Append the validation error, retry', fail: false,
+          explain: 'messages.parse() raises from INSIDE the call, so there is no raw "bad output" text available to echo back — only the error itself, appended as a new user turn.',
+          code: 'messages.append({"role": "user", "content":\n  "Your previous output failed schema validation:\\n...\\nPlease return a corrected JSON object that matches the schema exactly."})',
+        },
+        {
+          label: 'Attempt 2', title: '4 · Attempt 2 — Claude self-corrects', fail: false,
+          explain: 'Claude picks a single value from the range this time.',
+          code: '{"...", "tenure_years": 4, "loan_type": "business_loan", ...}',
+        },
+        {
+          label: 'Success', title: '5 · Validation passes → parsed_output', fail: false,
+          explain: 'The retry fixed a MODEL mistake (wrong type). response.parsed_output is now a real object.',
+          code: 'record.tenure_years  # 4  (int)',
+        },
+      ],
+    },
+    unrecoverable: {
+      label: 'Unrecoverable — no amount stated',
+      sub: '"...haven\'t decided the amount yet... I\'ll confirm once I know what the property costs." — no number, no retry can invent one.',
+      steps: [
+        {
+          label: 'Send', title: '1 · Attempt 1 — send the request', fail: false,
+          explain: 'Kavita Nair\'s text genuinely never states a loan amount anywhere.',
+          code: 'messages = [{"role": "user", "content":\n  "Extract the loan application fields from: \'...haven\'t decided the amount yet...\'"}]',
+        },
+        {
+          label: 'Fails', title: '2 · Attempt 1 — ValidationError', fail: true,
+          explain: 'Claude cannot state a loan_amount_inr that was never mentioned — the field is missing or invalid.',
+          code: 'ValidationError: 1 validation error for LoanApplicationRecord\nloan_amount_inr\n  Field required [type=missing]',
+        },
+        {
+          label: 'Retry msg', title: '3 · Append the validation error, retry', fail: false,
+          explain: 'Same retry mechanics as the recoverable case — the loop doesn\'t yet know this one is unrecoverable.',
+          code: 'messages.append({"role": "user", "content":\n  "Your previous output failed schema validation:\\n...\\nPlease return a corrected JSON object that matches the schema exactly."})',
+        },
+        {
+          label: 'Attempt 2', title: '4 · Attempt 2 (final) — still fails', fail: true,
+          explain: 'The source text still doesn\'t contain an amount. Re-prompting cannot manufacture one truthfully.',
+          code: 'ValidationError: 1 validation error for LoanApplicationRecord\nloan_amount_inr\n  Field required [type=missing]',
+        },
+        {
+          label: 'Exhausted', title: '5 · Retries exhausted → raise, don\'t guess', fail: true,
+          explain: 'MAX_RETRIES reached. The loop raises RuntimeError with the original text — logged and reported, never silently dropped, and never fabricated.',
+          code: 'raise RuntimeError(\n  f"Failed to extract after {MAX_RETRIES} retries. "\n  f"Original text: {raw_text!r}"\n) from e',
+        },
+      ],
+    },
+  };
+
+  let activeScenario = 'recoverable';
+  let stepIdx = 0;
+
+  function renderPicker(){
+    const box = document.getElementById('picker');
+    box.innerHTML = '';
+    Object.entries(SCENARIOS).forEach(([key, s]) => {
+      const chip = document.createElement('div');
+      chip.className = 'pick-chip' + (key === activeScenario ? ' active' : '') + (key === 'unrecoverable' ? ' unrecoverable' : '');
+      chip.textContent = s.label;
+      chip.onclick = () => { activeScenario = key; stepIdx = 0; renderAll(); };
+      box.appendChild(chip);
+    });
+    document.getElementById('scenario-sub').textContent = SCENARIOS[activeScenario].sub;
+  }
+
+  function renderFlowTrack(){
+    const steps = SCENARIOS[activeScenario].steps;
+    const track = document.getElementById('flow-track');
+    track.innerHTML = '';
+    steps.forEach((s, i) => {
+      const node = document.createElement('div');
+      node.className = 'flow-node' + (s.fail ? ' fail' : '') + (i === stepIdx ? ' active' : i < stepIdx ? ' done' : '');
+      node.innerHTML = `<span class="n">${i + 1}</span>${s.label}`;
+      node.onclick = () => { stepIdx = i; renderAll(); };
+      track.appendChild(node);
+    });
+  }
+
+  function renderFlowDetail(){
+    const steps = SCENARIOS[activeScenario].steps;
+    const s = steps[stepIdx];
+    document.getElementById('flow-title').textContent = s.title;
+    document.getElementById('flow-explain').textContent = s.explain;
+    document.getElementById('flow-code').textContent = s.code;
+    document.getElementById('flow-detail-wrap').classList.toggle('fail', s.fail);
+    document.getElementById('flow-progress').textContent = `Step ${stepIdx + 1} of ${steps.length}`;
+    document.getElementById('flow-prev').disabled = stepIdx === 0;
+    document.getElementById('flow-next').disabled = stepIdx === steps.length - 1;
+  }
+
+  function renderAll(){
+    renderPicker();
+    renderFlowTrack();
+    renderFlowDetail();
+  }
+
+  function flowStep(delta){
+    const steps = SCENARIOS[activeScenario].steps;
+    stepIdx = Math.min(steps.length - 1, Math.max(0, stepIdx + delta));
+    renderAll();
+  }
+
+  renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Schema Anatomy | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --badge:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--badge); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  /* ── Section 1: applicant picker ─────────────────────────────────────── */
+  .picker{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px}
+  .pick-chip{background:var(--surface2); border:1px solid var(--border); border-radius:99px;
+             padding:7px 14px; font-size:.8rem; cursor:pointer; color:var(--text-dim); transition:all .15s}
+  .pick-chip:hover{border-color:var(--teal-lite)}
+  .pick-chip.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--text)}
+
+  /* ── Section 2: anatomy grid ──────────────────────────────────────────── */
+  .anatomy-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:800px){.anatomy-grid{grid-template-columns:1fr}}
+  .raw-text{font-size:.9rem; line-height:1.9}
+  .src{cursor:pointer; border-bottom:1px dashed rgba(38,166,154,.55); border-radius:3px; padding:0 1px; transition:background .15s}
+  .src:hover, .src.lit{background:var(--teal-glow); color:var(--teal-lite)}
+  .field{cursor:pointer; border-bottom:1px dashed rgba(38,166,154,.55); padding:0 1px; border-radius:3px; transition:background .15s}
+  .field:hover, .field.lit{background:var(--teal-glow); color:var(--teal-lite)}
+  .field.nullval{color:var(--text-muted); font-style:italic}
+  .anatomy-desc{margin-top:14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+                padding:14px 16px; font-size:.82rem; color:var(--text-dim); min-height:56px}
+  .anatomy-desc b{color:var(--teal-lite)}
+  .anatomy-desc .ty{display:inline-block; background:var(--code-bg); border:1px solid var(--border);
+                     border-radius:6px; padding:1px 8px; font-family:ui-monospace,monospace; font-size:.74rem; margin-left:6px}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 3</span>
+      <div>
+        <h1>Schema Anatomy</h1>
+        <p>Building with Claude — from raw application text to a validated LoanApplicationRecord</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> A Pydantic schema isn't just a type declaration — each field
+    is a claim about one specific phrase in the source text. Click a highlighted phrase on the left,
+    or a field on the right, to see how they connect. Fully offline — nothing sends a real request.
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Pick an applicant</h2></div>
+    <p class="sec-sub">Same three example applicants as <code>day2/loan_application_extractor.py</code>.</p>
+    <div class="picker" id="picker"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Click a phrase or a field</h2></div>
+    <p class="sec-sub">The raw text on the left is what Claude sees. The fields on the right are what
+      <code>response.parsed_output</code> gives you back — already typed, already validated.</p>
+
+    <div class="card">
+      <div class="anatomy-grid">
+        <div>
+          <p style="font-size:.78rem; color:var(--text-muted); margin-bottom:8px;">RAW APPLICATION TEXT</p>
+          <div class="raw-text" id="raw-text"></div>
+        </div>
+        <div>
+          <p style="font-size:.78rem; color:var(--text-muted); margin-bottom:8px;">LoanApplicationRecord (response.parsed_output)</p>
+          <pre class="code" id="json-view"></pre>
+        </div>
+      </div>
+      <div class="anatomy-desc" id="anatomy-desc">👆 Click a phrase or a field above to see how they connect.</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-03-structured-outputs-and-validation.md">Module 3 — Structured
+  Outputs and Validation</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  const FIELD_DESC = {
+    applicant_name: { type: 'str', desc: 'A plain string — no constraint beyond being present.' },
+    loan_type: { type: 'Literal[4 values]', desc: 'Constrained to exactly home_loan / personal_loan / business_loan / vehicle_loan — never free text.' },
+    loan_amount_inr: { type: 'float, validated > 0', desc: 'Normalised to a plain number regardless of how the text phrased it ("45L" -> 4500000.0). A field_validator rejects anything <= 0.' },
+    monthly_income_inr: { type: 'float', desc: 'Also normalised from lakhs/thousands shorthand to a plain float.' },
+    tenure_years: { type: 'int', desc: 'Must resolve to ONE whole number of years — an ambiguous range like "4-5 years" fails validation (see Demo 2).' },
+    credit_score: { type: 'Optional[int] = None', desc: 'Allowed to be null — some applicants genuinely have no bureau score yet. This is a schema decision, not a Claude decision.' },
+  };
+
+  const APPLICANTS = [
+    {
+      id: 'rajesh',
+      label: 'Rajesh Kumar',
+      rawHtml: '<span class="src" data-field="applicant_name">Rajesh Kumar</span>, <span class="src" data-field="loan_type">home loan</span> INR <span class="src" data-field="loan_amount_inr">45L</span> over <span class="src" data-field="tenure_years">20 yrs</span>, <span class="src" data-field="monthly_income_inr">monthly income INR 85K</span>, <span class="src" data-field="credit_score">credit score 742</span>.',
+      json: { applicant_name: '"Rajesh Kumar"', loan_type: '"home_loan"', loan_amount_inr: '4500000.0', monthly_income_inr: '85000.0', tenure_years: '20', credit_score: '742' },
+    },
+    {
+      id: 'sunita',
+      label: 'Sunita Rao (no credit score)',
+      rawHtml: '<span class="src" data-field="applicant_name">Sunita Rao</span>, <span class="src" data-field="loan_type">personal loan</span> INR <span class="src" data-field="loan_amount_inr">3L</span>, repay over <span class="src" data-field="tenure_years">3 years</span>, <span class="src" data-field="monthly_income_inr">income INR 45K/month</span>. <em style="color:var(--text-muted)">(no credit score mentioned anywhere)</em>',
+      json: { applicant_name: '"Sunita Rao"', loan_type: '"personal_loan"', loan_amount_inr: '300000.0', monthly_income_inr: '45000.0', tenure_years: '3', credit_score: 'null' },
+    },
+    {
+      id: 'venkatesh',
+      label: 'Venkatesh Iyer (large loan)',
+      rawHtml: '<span class="src" data-field="applicant_name">Venkatesh Iyer</span>, <span class="src" data-field="loan_type">home loan</span> INR <span class="src" data-field="loan_amount_inr">70L</span>, <span class="src" data-field="tenure_years">25-year term</span>, <span class="src" data-field="monthly_income_inr">household income 1.5L/month</span>, <span class="src" data-field="credit_score">score 760</span>.',
+      json: { applicant_name: '"Venkatesh Iyer"', loan_type: '"home_loan"', loan_amount_inr: '7000000.0', monthly_income_inr: '150000.0', tenure_years: '25', credit_score: '760' },
+    },
+  ];
+
+  let activeApplicant = 0;
+  let activeField = null;
+
+  function renderPicker(){
+    const box = document.getElementById('picker');
+    box.innerHTML = '';
+    APPLICANTS.forEach((a, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'pick-chip' + (i === activeApplicant ? ' active' : '');
+      chip.textContent = a.label;
+      chip.onclick = () => { activeApplicant = i; activeField = null; renderAll(); };
+      box.appendChild(chip);
+    });
+  }
+
+  function renderRaw(){
+    document.getElementById('raw-text').innerHTML = APPLICANTS[activeApplicant].rawHtml;
+    document.querySelectorAll('.src').forEach(el => {
+      el.classList.toggle('lit', el.dataset.field === activeField);
+      el.onclick = () => { activeField = el.dataset.field; renderAll(); };
+    });
+  }
+
+  function renderJson(){
+    const a = APPLICANTS[activeApplicant];
+    const lines = Object.entries(a.json).map(([key, val]) => {
+      const isNull = val === 'null';
+      return `  "<span class="field${isNull ? ' nullval' : ''}" data-field="${key}">${key}</span>": ${val},`;
+    });
+    document.getElementById('json-view').innerHTML = '{\n' + lines.join('\n').replace(/,$/, '') + '\n}';
+    document.querySelectorAll('.field').forEach(el => {
+      el.classList.toggle('lit', el.dataset.field === activeField);
+      el.onclick = () => { activeField = el.dataset.field; renderAll(); };
+    });
+  }
+
+  function renderDesc(){
+    const box = document.getElementById('anatomy-desc');
+    if (!activeField){
+      box.innerHTML = '👆 Click a phrase or a field above to see how they connect.';
+      return;
+    }
+    const d = FIELD_DESC[activeField];
+    box.innerHTML = `<b>${activeField}</b><span class="ty">${d.type}</span><br>${d.desc}`;
+  }
+
+  function renderAll(){
+    renderPicker();
+    renderRaw();
+    renderJson();
+    renderDesc();
+  }
+
+  renderAll();
+</script>
+</body>
+</html>

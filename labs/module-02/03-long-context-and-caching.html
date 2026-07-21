@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Long-Context &amp; Caching | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --blue:#42a5f5; --blue-bg:rgba(66,165,245,.14);
+    --badge:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--badge); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:.76rem; color:var(--text-dim); margin:12px 0 18px}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .swatch{width:10px; height:10px; border-radius:3px; display:inline-block}
+  .swatch.fresh{background:var(--blue)}
+  .swatch.write{background:var(--amber)}
+  .swatch.read{background:var(--green)}
+
+  /* ── Section 1: step-through bars ────────────────────────────────────── */
+  .call-track{display:flex; gap:16px; align-items:flex-end; height:180px; margin-bottom:10px; padding:0 6px}
+  .call-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%}
+  .call-bar{width:100%; max-width:64px; display:flex; flex-direction:column-reverse; border-radius:6px 6px 0 0;
+            overflow:hidden; transition:height .4s ease}
+  .call-bar .seg{width:100%; transition:height .4s ease}
+  .call-bar .seg.fresh{background:var(--blue)}
+  .call-bar .seg.write{background:var(--amber)}
+  .call-bar .seg.read{background:var(--green)}
+  .call-lbl{font-size:.72rem; color:var(--text-dim); margin-top:8px; text-align:center}
+  .call-lbl b{display:block; color:var(--text); font-size:.8rem}
+  .call-col.dim{opacity:.25}
+
+  .controls-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px}
+  .toggle-cache{display:flex; align-items:center; gap:8px; font-size:.82rem; color:var(--text-dim); margin-left:auto}
+  .toggle-cache input{accent-color:var(--teal-mid)}
+  .totals{margin-top:14px; font-size:.8rem; color:var(--text-dim)}
+  .totals b{color:var(--text)}
+
+  /* ── Section 2: scale-out slider ──────────────────────────────────────── */
+  .slider-row{display:flex; align-items:center; gap:14px; margin-bottom:18px}
+  .slider-row input[type=range]{flex:1; accent-color:var(--teal-mid)}
+  .slider-row .n{font-size:.85rem; font-weight:700; min-width:70px; text-align:right}
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg); text-align:center}
+  .compare-card .num{font-size:1.7rem; font-weight:800}
+  .compare-card.nocache .num{color:var(--blue)}
+  .compare-card.cache .num{color:var(--green)}
+  .compare-card .lbl{font-size:.78rem; color:var(--text-dim); margin-top:4px}
+  .savings{text-align:center; margin-top:16px; font-size:.9rem; color:var(--green); font-weight:700}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 2</span>
+      <div>
+        <h1>Long-Context &amp; Caching</h1>
+        <p>Building with Claude — token budgeting and cache_control: ephemeral</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> Injecting a ~200-line policy document into every question
+    means resending it, and paying for it, on every call — unless you cache it. Step through three
+    calls below with caching off, then on, to see which token counts shrink and which don't.
+    Illustrative token counts only — everything here is offline and animated, no real request is
+    sent. Check <a href="https://platform.claude.com/docs" target="_blank" rel="noopener">platform.claude.com/docs</a>
+    for real per-model rates.
+  </div>
+
+  <!-- ══════════════ SECTION 1 — step through calls ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Step through three calls with the same document</h2></div>
+    <p class="sec-sub">Same policy document (~2,200 illustrative tokens), three different questions,
+      sent one after another.</p>
+
+    <div class="card">
+      <div class="legend">
+        <span><span class="swatch fresh"></span> fresh input tokens (billed in full)</span>
+        <span><span class="swatch write"></span> cache write (billed once, ~1.25× input rate)</span>
+        <span><span class="swatch read"></span> cache read (billed ~0.1× input rate)</span>
+      </div>
+
+      <div class="call-track" id="call-track"></div>
+
+      <div class="controls-row">
+        <button class="btn secondary" id="btn-reset" onclick="reset()">↺ Reset</button>
+        <button class="btn secondary" id="btn-step" onclick="step()">Step →</button>
+        <button class="btn" id="btn-play" onclick="toggleAuto()">▶ Play</button>
+        <label class="toggle-cache">
+          <input type="checkbox" id="cache-toggle" onchange="onCacheToggle()"> Enable prompt caching
+        </label>
+      </div>
+      <div class="totals" id="totals"></div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 2 — scale it out ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Scale it out: savings over a longer conversation</h2></div>
+    <p class="sec-sub">Drag to change how many questions reuse the same document in one session.</p>
+
+    <div class="card">
+      <div class="slider-row">
+        <input type="range" id="call-count" min="2" max="20" value="6" oninput="renderScaleOut()">
+        <span class="n" id="call-count-lbl">6 calls</span>
+      </div>
+      <div class="compare-grid">
+        <div class="compare-card nocache">
+          <div class="num" id="scale-nocache">–</div>
+          <div class="lbl">total document tokens billed at full rate<br>(no caching)</div>
+        </div>
+        <div class="compare-card cache">
+          <div class="num" id="scale-cache">–</div>
+          <div class="lbl">total document-token cost, in full-rate-equivalent units<br>(cached after call 1)</div>
+        </div>
+      </div>
+      <div class="savings" id="scale-savings"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-02-prompt-engineering-for-applications.md">Module 2 — Prompt
+  Engineering for Applications</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Section 1: step-through calls ─────────────────────────────────────
+  const DOC_TOKENS = 2200;
+  const QUESTION_TOKENS = 40;
+  const MAX_BAR = DOC_TOKENS + QUESTION_TOKENS;
+  const CALLS = [
+    'What is the max DTI\nfor a home loan?',
+    'How long does\ndisbursement take?',
+    'What documents does a\nself-employed applicant need?',
+  ];
+
+  let idx = 0;
+  let cacheOn = false;
+  let playTimer = null;
+
+  function barsFor(i){
+    // returns {fresh, write, read} token counts for call i (0-indexed)
+    if (!cacheOn){
+      return { fresh: DOC_TOKENS + QUESTION_TOKENS, write: 0, read: 0 };
+    }
+    if (i === 0){
+      return { fresh: QUESTION_TOKENS, write: DOC_TOKENS, read: 0 };
+    }
+    return { fresh: QUESTION_TOKENS, write: 0, read: DOC_TOKENS };
+  }
+
+  function renderTrack(){
+    const track = document.getElementById('call-track');
+    track.innerHTML = '';
+    CALLS.forEach((label, i) => {
+      const b = barsFor(i);
+      const total = b.fresh + b.write + b.read;
+      const scale = 150 / MAX_BAR; // px per token, bar area max 150px tall
+      const col = document.createElement('div');
+      col.className = 'call-col' + (i > idx ? ' dim' : '');
+      col.innerHTML = `
+        <div class="call-bar" style="height:${Math.max(total * scale, 4)}px">
+          ${b.read ? `<div class="seg read" style="height:${b.read*scale}px"></div>` : ''}
+          ${b.write ? `<div class="seg write" style="height:${b.write*scale}px"></div>` : ''}
+          <div class="seg fresh" style="height:${b.fresh*scale}px"></div>
+        </div>
+        <div class="call-lbl"><b>Call ${i+1}</b>${label}</div>`;
+      track.appendChild(col);
+    });
+  }
+
+  function renderTotals(){
+    let fresh = 0, write = 0, read = 0;
+    for (let i = 0; i <= idx; i++){
+      const b = barsFor(i);
+      fresh += b.fresh; write += b.write; read += b.read;
+    }
+    document.getElementById('totals').innerHTML =
+      `Through call ${idx+1}: <b>${fresh}</b> fresh input tokens, ` +
+      `<b>${write}</b> cache-write tokens, <b>${read}</b> cache-read tokens billed so far.`;
+    document.getElementById('btn-step').disabled = idx >= CALLS.length - 1;
+  }
+
+  function renderAll(){
+    renderTrack();
+    renderTotals();
+  }
+
+  function step(){
+    if (idx < CALLS.length - 1){ idx++; renderAll(); }
+    if (idx >= CALLS.length - 1) stopAuto();
+  }
+
+  function reset(){
+    idx = 0; stopAuto(); renderAll();
+  }
+
+  function onCacheToggle(){
+    cacheOn = document.getElementById('cache-toggle').checked;
+    reset();
+  }
+
+  function toggleAuto(){
+    const btn = document.getElementById('btn-play');
+    if (playTimer){
+      stopAuto();
+    } else {
+      if (idx >= CALLS.length - 1) idx = 0;
+      playTimer = setInterval(() => {
+        if (idx < CALLS.length - 1){ idx++; renderAll(); }
+        else stopAuto();
+      }, 1100);
+      btn.textContent = '⏸ Pause';
+    }
+  }
+
+  function stopAuto(){
+    if (playTimer){ clearInterval(playTimer); playTimer = null; }
+    document.getElementById('btn-play').textContent = '▶ Play';
+  }
+
+  // ── Section 2: scale-out slider ───────────────────────────────────────
+  function renderScaleOut(){
+    const n = parseInt(document.getElementById('call-count').value, 10);
+    document.getElementById('call-count-lbl').textContent = `${n} calls`;
+
+    const nocacheTotal = DOC_TOKENS * n;
+    // cache: call 1 costs ~1.25x (write), calls 2..n cost ~0.1x (read) — full-rate-equivalent units
+    const cacheEquivalent = Math.round(DOC_TOKENS * 1.25 + DOC_TOKENS * 0.1 * (n - 1));
+
+    document.getElementById('scale-nocache').textContent = nocacheTotal.toLocaleString();
+    document.getElementById('scale-cache').textContent = cacheEquivalent.toLocaleString();
+
+    const savingsPct = Math.round((1 - cacheEquivalent / nocacheTotal) * 100);
+    document.getElementById('scale-savings').textContent =
+      `≈ ${savingsPct}% fewer full-rate-equivalent document tokens billed across the session`;
+  }
+
+  renderAll();
+  renderScaleOut();
+</script>
+</body>
+</html>

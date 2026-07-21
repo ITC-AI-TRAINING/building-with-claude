@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Token Growth &amp; Summarization | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --blue:#42a5f5;
+    --badge:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--badge); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:.76rem; color:var(--text-dim); margin:12px 0 18px}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .swatch{width:10px; height:10px; border-radius:3px; display:inline-block}
+  .swatch.ok{background:var(--blue)}
+  .swatch.over{background:var(--red)}
+  .swatch.summary{background:var(--green)}
+
+  .chart-wrap{position:relative; height:200px; margin-bottom:10px; padding:0 6px}
+  .threshold-line{position:absolute; left:0; right:0; border-top:2px dashed var(--amber); z-index:1}
+  .threshold-label{position:absolute; right:0; top:-18px; font-size:.68rem; color:var(--amber)}
+  .call-track{display:flex; gap:14px; align-items:flex-end; height:100%; position:relative; z-index:2}
+  .call-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%}
+  .call-bar{width:100%; max-width:56px; border-radius:6px 6px 0 0; transition:height .4s ease, background .3s ease}
+  .call-bar.ok{background:var(--blue)}
+  .call-bar.over{background:var(--red)}
+  .call-bar.summary{background:var(--green)}
+  .call-lbl{font-size:.7rem; color:var(--text-dim); margin-top:8px; text-align:center}
+  .call-lbl b{display:block; color:var(--text); font-size:.78rem}
+  .call-col.dim{opacity:.25}
+
+  .controls-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px}
+  .totals{margin-top:14px; font-size:.8rem; color:var(--text-dim)}
+  .totals b{color:var(--text)}
+
+  .slider-row{display:flex; align-items:center; gap:14px; margin-bottom:14px}
+  .slider-row input[type=range]{flex:1; accent-color:var(--teal-mid)}
+  .slider-row .n{font-size:.85rem; font-weight:700; min-width:110px; text-align:right}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 4</span>
+      <div>
+        <h1>Token Growth &amp; Summarization</h1>
+        <p>Building with Claude — count_tokens() every turn, summarise-and-reset when it climbs too high</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> Every turn resends the full history (Module 4 §2), so token
+    count only ever climbs — until you compress it. Step through six turns below and watch the bar
+    climb, cross the threshold, and drop. Illustrative token counts only — fully offline, no API
+    calls.
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Step through six turns</h2></div>
+    <p class="sec-sub">Threshold fixed at 600 tokens for this walkthrough — the same number
+      <code>02-token-aware-summarization/</code>'s demo defaults to.</p>
+
+    <div class="card">
+      <div class="legend">
+        <span><span class="swatch ok"></span> under threshold</span>
+        <span><span class="swatch over"></span> over threshold — triggers a reset</span>
+        <span><span class="swatch summary"></span> right after a reset</span>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="threshold-line" id="threshold-line" style="bottom:0">
+          <span class="threshold-label">threshold</span>
+        </div>
+        <div class="call-track" id="call-track"></div>
+      </div>
+
+      <div class="controls-row">
+        <button class="btn secondary" id="btn-reset" onclick="reset()">↺ Reset</button>
+        <button class="btn secondary" id="btn-step" onclick="step()">Step →</button>
+        <button class="btn" id="btn-play" onclick="toggleAuto()">▶ Play</button>
+      </div>
+      <div class="totals" id="totals"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Try a different threshold</h2></div>
+    <p class="sec-sub">Drag to see how many reset cycles the same six turns trigger at a lower or
+      higher threshold.</p>
+
+    <div class="card">
+      <div class="slider-row">
+        <input type="range" id="threshold-slider" min="200" max="900" step="10" value="600" oninput="renderScale()">
+        <span class="n" id="threshold-lbl">600 tokens</span>
+      </div>
+      <div class="totals" id="scale-summary"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-04-conversation-and-context-management.md">Module 4 —
+  Conversation and Context Management</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // Illustrative per-turn token deltas (six talkative turns, like Demo 2's script).
+  const DELTAS = [180, 160, 180, 190, 175, 165];
+  const SUMMARY_TOKENS = 130; // illustrative cost of the "[Session summary]" turn after a reset
+  const FIXED_THRESHOLD = 600;
+  const MAX_BAR_TOKENS = 900; // chart scale ceiling
+
+  function computeRun(threshold){
+    let running = 0;
+    const points = [];
+    DELTAS.forEach((delta) => {
+      running += delta;
+      const over = running > threshold;
+      points.push({ tokens: running, over });
+      if (over) running = SUMMARY_TOKENS;
+    });
+    return points;
+  }
+
+  // ── Section 1: step-through ───────────────────────────────────────────
+  let idx = 0;
+  let playTimer = null;
+  const RUN = computeRun(FIXED_THRESHOLD);
+
+  function renderTrack(){
+    const track = document.getElementById('call-track');
+    track.innerHTML = '';
+    const scale = 190 / MAX_BAR_TOKENS;
+    RUN.forEach((p, i) => {
+      const wasReset = p.over;
+      const barClass = wasReset ? 'over' : (RUN[i - 1] && RUN[i - 1].over ? 'summary' : 'ok');
+      const col = document.createElement('div');
+      col.className = 'call-col' + (i > idx ? ' dim' : '');
+      col.innerHTML = `
+        <div class="call-bar ${barClass}" style="height:${Math.max(p.tokens * scale, 4)}px"></div>
+        <div class="call-lbl"><b>Turn ${i + 1}</b>${p.tokens} tok${wasReset ? '<br>→ reset!' : ''}</div>`;
+      track.appendChild(col);
+    });
+    document.getElementById('threshold-line').style.bottom = `${FIXED_THRESHOLD * scale}px`;
+  }
+
+  function renderTotals(){
+    const resets = RUN.slice(0, idx + 1).filter(p => p.over).length;
+    document.getElementById('totals').innerHTML =
+      `Through turn ${idx + 1}: <b>${RUN[idx].tokens}</b> tokens in the current history. ` +
+      `<b>${resets}</b> reset cycle(s) triggered so far.`;
+    document.getElementById('btn-step').disabled = idx >= RUN.length - 1;
+  }
+
+  function renderAll(){ renderTrack(); renderTotals(); }
+
+  function step(){
+    if (idx < RUN.length - 1){ idx++; renderAll(); }
+    if (idx >= RUN.length - 1) stopAuto();
+  }
+  function reset(){ idx = 0; stopAuto(); renderAll(); }
+  function toggleAuto(){
+    const btn = document.getElementById('btn-play');
+    if (playTimer){ stopAuto(); return; }
+    if (idx >= RUN.length - 1) idx = 0;
+    playTimer = setInterval(() => {
+      if (idx < RUN.length - 1){ idx++; renderAll(); } else stopAuto();
+    }, 1100);
+    btn.textContent = '⏸ Pause';
+  }
+  function stopAuto(){
+    if (playTimer){ clearInterval(playTimer); playTimer = null; }
+    document.getElementById('btn-play').textContent = '▶ Play';
+  }
+
+  // ── Section 2: threshold slider ───────────────────────────────────────
+  function renderScale(){
+    const threshold = parseInt(document.getElementById('threshold-slider').value, 10);
+    document.getElementById('threshold-lbl').textContent = `${threshold} tokens`;
+    const points = computeRun(threshold);
+    const resets = points.filter(p => p.over).length;
+    document.getElementById('scale-summary').innerHTML =
+      `At a ${threshold}-token threshold, these same six turns trigger <b>${resets}</b> ` +
+      `reset cycle(s). ${resets === 0 ? 'The conversation never gets compressed.' :
+        resets >= 3 ? 'Compressing this often may start losing detail between resets.' :
+        'A reasonable balance for this conversation length.'}`;
+  }
+
+  renderAll();
+  renderScale();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+[project]
+name = "downstream-integration"
+version = "0.1.0"
+description = "Module 3 demo — reshapes already-validated LoanApplicationRecord objects for three downstream consumers (CSV row, committee queue, DTI risk bucket) with no API calls and no re-validation (based on day2/loan_application_extractor.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+]

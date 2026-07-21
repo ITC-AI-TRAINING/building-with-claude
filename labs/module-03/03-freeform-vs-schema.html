@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Freeform vs. Schema | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --badge:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--badge); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn.danger{background:#b71c1c}
+  button.btn.danger:hover{background:#c62828}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg)}
+  .compare-card.bad{border-color:rgba(239,83,80,.4)}
+  .compare-card.good{border-color:rgba(76,175,80,.4)}
+  .compare-title{font-size:.85rem; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .compare-title.bad{color:var(--red)}
+  .compare-title.good{color:var(--green)}
+  .result-box{margin-top:14px; border-radius:8px; padding:12px 14px; font-size:.78rem; display:none}
+  .result-box.show{display:block; animation:fadein .3s ease}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)}}
+  .result-box.leak{background:var(--red-bg); border:1px solid rgba(239,83,80,.4); color:var(--red)}
+  .result-box.safe{background:var(--green-bg); border:1px solid rgba(76,175,80,.4); color:var(--green)}
+  .attempt-log{font-size:.72rem; color:var(--text-muted); margin-top:8px}
+
+  table.trust{width:100%; border-collapse:collapse; font-size:.82rem}
+  table.trust th, table.trust td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--border)}
+  table.trust th{color:var(--text-muted); font-weight:600; font-size:.74rem; text-transform:uppercase; letter-spacing:.03em}
+  table.trust td.yes{color:var(--green)}
+  table.trust td.no{color:var(--red)}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 3</span>
+      <div>
+        <h1>Freeform vs. Schema</h1>
+        <p>Building with Claude — why messages.parse() is safer than create() + json.loads()</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> Both approaches below "work" most of the time — which is
+    exactly why the difference is easy to miss until a pipeline breaks in production. Click
+    <strong>Simulate</strong> on each card a few times to see the shape of the difference. Fully
+    offline — nothing sends a real request.
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Simulate the same extraction, twice</h2></div>
+    <p class="sec-sub">Click Simulate repeatedly on each side — the naive approach's outcome
+      changes depending on how Claude happens to format that response; the schema-driven side
+      doesn't have that variable at all.</p>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-title bad">❌ create() + json.loads()</div>
+        <pre class="code">response = client.messages.create(...)
+text = response.content[0].text
+data = json.loads(text)</pre>
+        <button class="btn danger" onclick="simulateNaive()">Simulate: run extraction</button>
+        <div class="result-box" id="result-naive"></div>
+        <div class="attempt-log" id="naive-log"></div>
+      </div>
+
+      <div class="compare-card good">
+        <div class="compare-title good">✅ messages.parse(output_format=...)</div>
+        <pre class="code">response = client.messages.parse(
+    ..., output_format=LoanApplicationRecord)
+record = response.parsed_output</pre>
+        <button class="btn secondary" onclick="simulateSchema()">Simulate: run extraction</button>
+        <div class="result-box" id="result-schema"></div>
+        <div class="attempt-log" id="schema-log"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>What schema-driven parsing does and doesn't guarantee</h2></div>
+    <p class="sec-sub">Don't over-claim what <code>messages.parse()</code> buys you — it guarantees
+      shape, not truth.</p>
+    <div class="card">
+      <table class="trust">
+        <tr><th>Claim</th><th>Guaranteed by messages.parse()?</th></tr>
+        <tr><td>Output is valid JSON matching the schema's types</td><td class="yes">Yes</td></tr>
+        <tr><td><code>loan_type</code> is one of the 4 declared Literal values</td><td class="yes">Yes</td></tr>
+        <tr><td><code>loan_amount_inr</code> is a float greater than 0</td><td class="yes">Yes — enforced by the field_validator</td></tr>
+        <tr><td>No raw-text parsing step to break on a fence or stray prose</td><td class="yes">Yes</td></tr>
+        <tr><td>The extracted values are factually correct / not hallucinated</td><td class="no">No — that's Module 7's job</td></tr>
+        <tr><td>The source text actually contained enough information to answer</td><td class="no">No — see Demo 2's unrecoverable case</td></tr>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-03-structured-outputs-and-validation.md">Module 3 — Structured
+  Outputs and Validation</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // Cycles through 3 realistic naive-output shapes to show the non-determinism.
+  const NAIVE_OUTCOMES = [
+    { ok: true, text: '{"applicant_name": "Rajesh Kumar", "loan_type": "home_loan", ...}', note: 'Clean JSON, no fence, no extra prose — json.loads() succeeds this time.' },
+    { ok: false, text: '```json\n{"applicant_name": "Rajesh Kumar", ...}\n```', note: 'Wrapped in a markdown fence — json.loads() raises JSONDecodeError on the raw text.' },
+    { ok: false, text: 'Here is the extracted JSON:\n{"applicant_name": "Rajesh Kumar", ...}', note: 'A leading sentence before the object — json.loads() raises JSONDecodeError.' },
+  ];
+  let naiveAttempt = 0;
+
+  function simulateNaive(){
+    const outcome = NAIVE_OUTCOMES[naiveAttempt % NAIVE_OUTCOMES.length];
+    naiveAttempt++;
+    const box = document.getElementById('result-naive');
+    box.className = 'result-box show ' + (outcome.ok ? 'safe' : 'leak');
+    box.innerHTML = `<div style="font-family:ui-monospace,monospace; margin-bottom:8px; white-space:pre-wrap;">${outcome.text}</div>` +
+      `${outcome.ok ? '✅' : '🚨'} ${outcome.note}`;
+    document.getElementById('naive-log').textContent =
+      `Attempt ${naiveAttempt} — outcome depends on how Claude happened to format this response.`;
+  }
+
+  let schemaAttempt = 0;
+  function simulateSchema(){
+    schemaAttempt++;
+    const box = document.getElementById('result-schema');
+    box.className = 'result-box show safe';
+    box.innerHTML = `<div style="font-family:ui-monospace,monospace; margin-bottom:8px;">record.loan_type  # "home_loan" (guaranteed one of 4 values)\nrecord.loan_amount_inr  # 4500000.0 (guaranteed float > 0)</div>` +
+      '✅ Same result every time — there is no raw-text shape for a fence or stray prose to break.';
+    document.getElementById('schema-log').textContent =
+      `Attempt ${schemaAttempt} — deterministic: the SDK validated the shape before you ever see it.`;
+  }
+</script>
+</body>
+</html>

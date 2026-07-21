@@ -1,0 +1,10 @@
+[project]
+name = "token-aware-summarization"
+version = "0.1.0"
+description = "Module 4 demo — runs a scripted conversation, tracks token count via count_tokens() after every turn, and triggers summarise-and-reset once a demo-friendly threshold is crossed (based on day2/loan_intake_manager.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.117.0",
+    "python-dotenv>=1.2.2",
+]

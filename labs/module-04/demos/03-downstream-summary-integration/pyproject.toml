@@ -1,0 +1,9 @@
+[project]
+name = "downstream-summary-integration"
+version = "0.1.0"
+description = "Module 4 demo — reshapes an already-produced IntakeSummary into downstream artifacts (CRM follow-up task, risk-flagged queue entry, customer-facing next-step message) with no API calls (based on day2/loan_intake_manager.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+]

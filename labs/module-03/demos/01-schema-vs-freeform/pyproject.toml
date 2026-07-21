@@ -1,0 +1,11 @@
+[project]
+name = "schema-vs-freeform"
+version = "0.1.0"
+description = "Module 3 demo — compares naive create()+json.loads() extraction against schema-driven messages.parse(output_format=...) on the same raw loan application text (based on day2/loan_application_extractor.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.117.0",
+    "python-dotenv>=1.2.2",
+    "pydantic>=2.7",
+]

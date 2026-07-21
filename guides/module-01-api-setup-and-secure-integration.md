@@ -569,13 +569,20 @@ flowchart LR
 |---|---|---|
 | 1. API Setup and Secure Integration | Secure, env-managed Claude call | `day1/` (`secure_call.py`, `lab1.md`) |
 | 2. Prompt Engineering for Applications | Finance credit-policy explainer | `day1/` (`credit_policy_assistant.py`, `lab2.md`) |
-| 3. Structured Outputs and Validation | Retail product enrichment | `day2/` |
-| 4. Conversation and Context Management | Telecom complaint summariser | `day2/` |
+| 3. Structured Outputs and Validation | Apex Bank loan-application data extraction | `day2/` (`loan_application_extractor.py`, `lab3.md`) |
+| 4. Conversation and Context Management | Apex Bank loan intake conversation manager | `day2/` (`loan_intake_manager.py`, `lab4.md`) |
 | 5. Tool Use and Function Integration | Invoice validation + vendor lookup | `day3/` |
 | 6. Retrieval-Grounded Responses (RAG) | Finance SOP assistant | `day3/` – `day4/` |
 | 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` – `day5/` |
 | 8. Applied Mini-Project | Telecom support triage assistant | `day5/` |
 | 9. Exit Test | Scenario assessment | — |
+
+> Rows 3–4 reflect what's actually built in `day2/` (Apex Bank loan-application extraction and
+> conversation management), not the course PDF's generic retail/telecom hands-on cells for those
+> modules — see `CLAUDE.md`'s finance-domain convention and the
+> [Module 3 guide](module-03-structured-outputs-and-validation.md#where-module-3-fits-in-the-course)
+> for the full note. Rows 5–8 describe `day3/`–`day5/`, which don't exist yet — worth
+> double-checking against the real files once those folders are built.
 
 **Reference material:** [`README.md`](../README.md) (program overview, version policy, security
 ground rules) · [`SETUP.md`](../SETUP.md) (environment setup) ·

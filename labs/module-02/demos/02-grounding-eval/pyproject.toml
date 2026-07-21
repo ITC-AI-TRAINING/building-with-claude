@@ -1,0 +1,10 @@
+[project]
+name = "grounding-eval"
+version = "0.1.0"
+description = "Module 2 demo — automated pass/fail battery over in-scope, near-miss, and adversarial questions checking section citation and exact fallback wording (based on day1/credit_policy_assistant.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.117.0",
+    "python-dotenv>=1.2.2",
+]

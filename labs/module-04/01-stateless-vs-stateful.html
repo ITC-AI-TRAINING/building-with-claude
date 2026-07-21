@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stateless vs. Stateful | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --badge:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--badge); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn.danger{background:#b71c1c}
+  button.btn.danger:hover{background:#c62828}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg)}
+  .compare-card.bad{border-color:rgba(239,83,80,.4)}
+  .compare-card.good{border-color:rgba(76,175,80,.4)}
+  .compare-title{font-size:.85rem; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .compare-title.bad{color:var(--red)}
+  .compare-title.good{color:var(--green)}
+  .result-box{margin-top:14px; border-radius:8px; padding:12px 14px; font-size:.78rem; display:none}
+  .result-box.show{display:block; animation:fadein .3s ease}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)}}
+  .result-box.leak{background:var(--red-bg); border:1px solid rgba(239,83,80,.4); color:var(--red)}
+  .result-box.safe{background:var(--green-bg); border:1px solid rgba(76,175,80,.4); color:var(--green)}
+
+  .flow-track{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px}
+  .flow-node{flex:1; min-width:100px; text-align:center; padding:10px 8px; border-radius:8px;
+             background:var(--surface2); border:1px solid var(--border); font-size:.72rem; color:var(--text-dim);
+             cursor:pointer; transition:all .2s}
+  .flow-node .n{display:block; font-weight:700; font-size:.9rem; color:var(--text); margin-bottom:2px}
+  .flow-node.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .flow-node.active .n{color:var(--teal-lite)}
+  .flow-node.done{opacity:.55}
+  .flow-detail{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:18px; margin-top:8px}
+  .flow-detail h3{font-size:.95rem; margin-bottom:8px; color:var(--teal-lite)}
+  .flow-detail p{font-size:.83rem; color:var(--text-dim); margin-bottom:12px}
+  .flow-controls{display:flex; gap:10px; margin-top:16px; align-items:center}
+  .flow-progress{font-size:.76rem; color:var(--text-muted); margin-left:auto}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 4</span>
+      <div>
+        <h1>Stateless vs. Stateful</h1>
+        <p>Building with Claude — the API has no memory; your client does</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> Claude never remembers a prior call on the server. Click
+    <strong>Simulate</strong> below to see the same final question answered two different ways,
+    depending only on what the client chooses to send. Fully offline — nothing sends a real
+    request.
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Same question, two clients</h2></div>
+    <p class="sec-sub">Both sides received the same three turns. Only the THIRD call differs in
+      what gets sent.</p>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-title bad">❌ Send only the latest message</div>
+        <pre class="code">response = client.messages.create(
+    ...,
+    messages=[{"role": "user",
+               "content": "What was my name again?"}]
+)</pre>
+        <button class="btn danger" onclick="simulate('broken')">Simulate: ask the final question</button>
+        <div class="result-box leak" id="result-broken">
+          🚨 <strong>"I don't have any information about your name or loan type on file yet —
+          could you remind me?"</strong><br>Correct behavior for what it was actually sent: this
+          call has no earlier turns in it at all.
+        </div>
+      </div>
+
+      <div class="compare-card good">
+        <div class="compare-title good">✅ Resend the full history</div>
+        <pre class="code">response = client.messages.create(
+    ...,
+    messages=self.messages   # all 5 prior turns + this one
+)</pre>
+        <button class="btn secondary" onclick="simulate('correct')">Simulate: ask the final question</button>
+        <div class="result-box safe" id="result-correct">
+          ✅ <strong>"Your name is Priya Sharma, and you asked about a home loan."</strong><br>
+          Correct, because "Priya Sharma" and "home loan" are still sitting in the message list
+          this call actually sent.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Step through how the correct side's history grows</h2></div>
+    <p class="sec-sub">Every <code>send()</code> appends the user turn AND the assistant reply —
+      both, every time.</p>
+
+    <div class="card">
+      <div class="flow-track" id="flow-track"></div>
+      <div class="flow-detail">
+        <h3 id="flow-title"></h3>
+        <p id="flow-explain"></p>
+        <pre class="code" id="flow-code"></pre>
+      </div>
+      <div class="flow-controls">
+        <button class="btn secondary" id="flow-prev" onclick="flowStep(-1)">← Prev</button>
+        <button class="btn" id="flow-next" onclick="flowStep(1)">Next →</button>
+        <span class="flow-progress" id="flow-progress"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-04-conversation-and-context-management.md">Module 4 —
+  Conversation and Context Management</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  function simulate(kind){
+    document.getElementById('result-' + kind).classList.add('show');
+  }
+
+  const STEPS = [
+    {
+      label: 'Turn 1', title: '1 · messages = [u1]',
+      explain: "The applicant's first message is appended before the call.",
+      code: 'self.messages = [\n  {"role": "user", "content": "Hi, I want a home loan... Priya Sharma..."}\n]',
+    },
+    {
+      label: '+ Reply', title: '2 · messages = [u1, a1]',
+      explain: "The assistant's reply is appended right after — this is the step that's easy to forget.",
+      code: 'self.messages = [\n  {"role": "user", "content": "...Priya Sharma..."},\n  {"role": "assistant", "content": "Nice to meet you, Priya! What loan type..."}\n]',
+    },
+    {
+      label: 'Turn 2', title: '3 · messages = [u1, a1, u2]',
+      explain: 'The next user turn is appended on top of the full existing history.',
+      code: 'self.messages = [..., {"role": "user", "content": "My monthly salary is 80,000 rupees."}]',
+    },
+    {
+      label: '+ Reply', title: '4 · messages = [u1, a1, u2, a2]',
+      explain: 'Again, both sides of the turn are kept.',
+      code: 'self.messages = [..., {"role": "assistant", "content": "Got it — and your desired tenure?"}]',
+    },
+    {
+      label: 'Turn 3', title: '5 · messages = [u1, a1, u2, a2, u3]',
+      explain: 'By the time the final question arrives, the FULL history is what gets resent — this is why the correct side can answer it.',
+      code: 'self.messages = [..., {"role": "user", "content": "What was my name again, and what loan type did I ask for?"}]',
+    },
+  ];
+
+  let stepIdx = 0;
+
+  function renderFlowTrack(){
+    const track = document.getElementById('flow-track');
+    track.innerHTML = '';
+    STEPS.forEach((s, i) => {
+      const node = document.createElement('div');
+      node.className = 'flow-node' + (i === stepIdx ? ' active' : i < stepIdx ? ' done' : '');
+      node.innerHTML = `<span class="n">${i + 1}</span>${s.label}`;
+      node.onclick = () => { stepIdx = i; renderFlow(); };
+      track.appendChild(node);
+    });
+  }
+
+  function renderFlow(){
+    renderFlowTrack();
+    const s = STEPS[stepIdx];
+    document.getElementById('flow-title').textContent = s.title;
+    document.getElementById('flow-explain').textContent = s.explain;
+    document.getElementById('flow-code').textContent = s.code;
+    document.getElementById('flow-progress').textContent = `Step ${stepIdx + 1} of ${STEPS.length}`;
+    document.getElementById('flow-prev').disabled = stepIdx === 0;
+    document.getElementById('flow-next').disabled = stepIdx === STEPS.length - 1;
+  }
+
+  function flowStep(delta){
+    stepIdx = Math.min(STEPS.length - 1, Math.max(0, stepIdx + delta));
+    renderFlow();
+  }
+
+  renderFlow();
+</script>
+</body>
+</html>

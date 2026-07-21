@@ -1,0 +1,10 @@
+[project]
+name = "stateless-memory"
+version = "0.1.0"
+description = "Module 4 demo — proves the Claude API is stateless by running the same conversation through a broken (latest-message-only) manager and the correct full-history ConversationManager (based on day2/loan_intake_manager.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.117.0",
+    "python-dotenv>=1.2.2",
+]
