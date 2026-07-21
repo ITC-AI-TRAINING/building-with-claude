@@ -40,3 +40,6 @@ case_studies/*.docx
 
 # Claude Code configuration — contains repo-specific AI guidance
 CLAUDE.md
+
+# exclude .DS_Store files
+.DS_Store
