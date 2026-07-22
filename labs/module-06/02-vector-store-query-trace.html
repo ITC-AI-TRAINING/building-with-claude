@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vector Store Query Trace | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --m1:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--m1); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.8rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .msg-track{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; min-height:40px}
+  .msg-chip{
+    padding:7px 11px; border-radius:7px; font-size:.72rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); cursor:default;
+    transition:all .2s; opacity:.35;
+  }
+  .msg-chip.shown{opacity:1}
+  .msg-chip.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .msg-chip.user{color:#5c9ce6}
+  .msg-chip.tool_use{color:var(--amber)}
+  .msg-chip.tool_result{color:var(--teal-lite)}
+  .msg-chip.text{color:var(--green)}
+  .msg-chip.shown.user{border-color:rgba(21,101,192,.4)}
+  .msg-chip.shown.tool_use{border-color:rgba(255,179,0,.4)}
+  .msg-chip.shown.tool_result{border-color:rgba(38,166,154,.4)}
+  .msg-chip.shown.text{border-color:rgba(76,175,80,.4)}
+
+  .detail{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:18px}
+  .detail h3{font-size:.9rem; margin-bottom:8px; color:var(--teal-lite)}
+  .detail p{font-size:.82rem; color:var(--text-dim); margin-bottom:10px}
+
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:16px}
+  .status-row{display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; font-size:.8rem}
+  .status-chip{display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:99px;
+               background:var(--surface2); border:1px solid var(--border); color:var(--text-dim)}
+  .status-chip b{color:var(--text)}
+  .status-chip.pass{background:var(--green-bg); border-color:rgba(76,175,80,.35); color:var(--green)}
+  .status-chip.pending{background:var(--amber-bg); border-color:rgba(255,179,0,.35); color:var(--amber)}
+  .progress{font-size:.76rem; color:var(--text-muted); margin-left:auto}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 6</span>
+      <div>
+        <h1>Vector Store Query Trace</h1>
+        <p>Building with Claude — Retrieval-Grounded Responses</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> A vector-store query is a small, fixed sequence — embed,
+    query, rank, gate — every time, regardless of the question. Step through a representative
+    query against the real Apex Bank corpus below. <strong>Note:</strong> the distances shown are
+    illustrative example values, not numbers pulled from a live API call — run
+    <code>labs/module-06/demos/02-chroma-vector-store/</code> locally with your own OpenAI key to
+    see real ones. Fully offline — this page never calls a real API.
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Query: "What is the maximum LTV for a home loan?"</h2></div>
+    <p class="sec-sub">This question is directly covered by the Credit Policy Manual's LTV table
+      (see <a href="../../shared/data/apex_bank_credit_policy.md">apex_bank_credit_policy.md</a>).
+      Press <strong>Step</strong> or <strong>Auto-play</strong> to advance the trace.</p>
+
+    <div class="card">
+      <div class="msg-track" id="msg-track"></div>
+
+      <div class="detail">
+        <h3 id="detail-title"></h3>
+        <p id="detail-explain"></p>
+        <pre class="code" id="detail-code"></pre>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="step-btn" onclick="step()">▶ Step</button>
+        <button class="btn secondary" id="auto-btn" onclick="toggleAuto()">⏩ Auto-play</button>
+        <button class="btn secondary" onclick="reset()">↺ Reset</button>
+        <span class="progress" id="progress"></span>
+      </div>
+
+      <div class="status-row">
+        <div class="status-chip" id="chip-embed">OpenAI embedding calls so far: <b id="embed-count">0</b></div>
+        <div class="status-chip" id="chip-gate">retrieval_check: <b id="gate-status">—</b></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-06-retrieval-grounded-responses.md">Module 6 — Retrieval-
+  Grounded Responses</a> · Building with Claude ·
+  see this trace as real code in <a href="../../day3/rag_pipeline.py">day3/rag_pipeline.py</a> and
+  <a href="../../day4/rag_assistant.py">day4/rag_assistant.py</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // A representative query-time trace over the real Apex Bank corpus. Distances
+  // are illustrative example values (ordering reflects real topical relevance),
+  // not numbers captured from a live OpenAI call — see the intro note above.
+  const TRACE = [
+    {
+      chip: 'Q1', kind: 'user', embedAfter: false, gate: '—',
+      title: 'The question arrives',
+      explain: 'day4/rag_assistant.py\'s answer_question(collection, query) is called with this question, before anything else has happened.',
+      code: 'query = "What is the maximum LTV for a home loan?"'
+    },
+    {
+      chip: 'E1', kind: 'tool_use', embedAfter: true, gate: '—',
+      title: 'embed([query]) — one OpenAI call',
+      explain: 'The SAME embedding model used at index time (text-embedding-3-small) turns the question into a 1536-dimensional vector — a different model here would make every distance meaningless.',
+      code: 'query_vector = embed([query])[0]\n# query_vector = [0.0089, -0.0341, 0.0512, ... ]  (1536 numbers)'
+    },
+    {
+      chip: 'QR', kind: 'tool_use', embedAfter: false, gate: '—',
+      title: 'collection.query(query_embeddings=[query_vector], n_results=3)',
+      explain: 'The persisted day3/chroma_db/ collection (5 chunks from the SOP + Credit Policy) is searched for the 3 nearest vectors by cosine distance.',
+      code: 'result = collection.query(\n    query_embeddings=[query_vector], n_results=3,\n    include=["documents", "metadatas", "distances"],\n)'
+    },
+    {
+      chip: 'H1', kind: 'tool_result', embedAfter: false, gate: '—',
+      title: 'Ranked hits returned, ascending distance',
+      explain: 'Lower distance = more similar (cosine space). The two policy chunks about LTV rank far above the unrelated SOP chunks — illustrative distances shown.',
+      code: '[1] policy-1 (Credit Policy)  — distance 0.091\n    "Maximum loan-to-value ratio for home loans is 90%..."\n[2] policy-2 (Credit Policy)  — distance 0.184\n    "LTV for other secured products: vehicle loan 85%..."\n[3] sop-0    (Loan Processing SOP) — distance 0.512\n    "All loan applicants must meet the following minimum..."'
+    },
+    {
+      chip: 'G1', kind: 'text', embedAfter: false, gate: 'passed',
+      title: 'retrieval_check(hits) — the relevance gate',
+      explain: 'hits[0]["distance"] (0.091) is well under RELEVANCE_THRESHOLD (0.45) — the gate passes, so answer_question() proceeds to call Claude with the retrieved context. See 03-grounded-answer-and-citations.html for what happens next, and for what a FAILED gate looks like for an out-of-scope question.',
+      code: 'RELEVANCE_THRESHOLD = 0.45\nhits[0]["distance"] <= RELEVANCE_THRESHOLD\n# 0.091 <= 0.45  ->  True  ->  proceed to answer synthesis'
+    },
+  ];
+
+  let idx = -1;
+  let embeds = 0;
+  let autoTimer = null;
+
+  function renderTrack(){
+    const track = document.getElementById('msg-track');
+    track.innerHTML = '';
+    TRACE.forEach((m, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'msg-chip ' + m.kind + (i <= idx ? ' shown' : '') + (i === idx ? ' active' : '');
+      chip.textContent = m.chip;
+      track.appendChild(chip);
+    });
+  }
+
+  function renderDetail(){
+    if (idx < 0){
+      document.getElementById('detail-title').textContent = 'Not started';
+      document.getElementById('detail-explain').textContent = 'Press Step to see the question arrive.';
+      document.getElementById('detail-code').textContent = '';
+      return;
+    }
+    const m = TRACE[idx];
+    document.getElementById('detail-title').textContent = m.title;
+    document.getElementById('detail-explain').textContent = m.explain;
+    document.getElementById('detail-code').textContent = m.code;
+  }
+
+  function renderStatus(){
+    document.getElementById('embed-count').textContent = String(embeds);
+    const gate = idx >= 0 ? TRACE[idx].gate : '—';
+    const chip = document.getElementById('chip-gate');
+    const label = document.getElementById('gate-status');
+    label.textContent = gate;
+    chip.className = 'status-chip' + (gate === 'passed' ? ' pass' : gate === '—' ? '' : ' pending');
+    document.getElementById('progress').textContent = `Step ${Math.max(idx,0) + (idx>=0?1:0)} of ${TRACE.length}`;
+    document.getElementById('step-btn').disabled = idx >= TRACE.length - 1;
+  }
+
+  function step(){
+    if (idx >= TRACE.length - 1) return;
+    idx++;
+    if (TRACE[idx].embedAfter) embeds++;
+    renderTrack();
+    renderDetail();
+    renderStatus();
+    if (idx >= TRACE.length - 1){
+      clearInterval(autoTimer); autoTimer = null;
+      document.getElementById('auto-btn').textContent = '⏩ Auto-play';
+    }
+  }
+
+  function reset(){
+    idx = -1; embeds = 0;
+    clearInterval(autoTimer); autoTimer = null;
+    document.getElementById('auto-btn').textContent = '⏩ Auto-play';
+    renderTrack();
+    renderDetail();
+    renderStatus();
+  }
+
+  function toggleAuto(){
+    const btn = document.getElementById('auto-btn');
+    if (autoTimer){
+      clearInterval(autoTimer); autoTimer = null;
+      btn.textContent = '⏩ Auto-play';
+      return;
+    }
+    btn.textContent = '⏸ Stop';
+    autoTimer = setInterval(() => {
+      if (idx >= TRACE.length - 1){
+        clearInterval(autoTimer); autoTimer = null;
+        btn.textContent = '⏩ Auto-play';
+        return;
+      }
+      step();
+    }, 1100);
+  }
+
+  reset();
+</script>
+</body>
+</html>

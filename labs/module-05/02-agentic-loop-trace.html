@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agentic Loop Trace | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --m1:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--m1); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.8rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .msg-track{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; min-height:40px}
+  .msg-chip{
+    padding:7px 11px; border-radius:7px; font-size:.72rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); cursor:default;
+    transition:all .2s; opacity:.35;
+  }
+  .msg-chip.shown{opacity:1}
+  .msg-chip.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .msg-chip.user{color:#5c9ce6}
+  .msg-chip.tool_use{color:var(--amber)}
+  .msg-chip.tool_result{color:var(--teal-lite)}
+  .msg-chip.text{color:var(--green)}
+  .msg-chip.shown.user{border-color:rgba(21,101,192,.4)}
+  .msg-chip.shown.tool_use{border-color:rgba(255,179,0,.4)}
+  .msg-chip.shown.tool_result{border-color:rgba(38,166,154,.4)}
+  .msg-chip.shown.text{border-color:rgba(76,175,80,.4)}
+
+  .detail{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:18px}
+  .detail h3{font-size:.9rem; margin-bottom:8px; color:var(--teal-lite)}
+  .detail p{font-size:.82rem; color:var(--text-dim); margin-bottom:10px}
+
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:16px}
+  .status-row{display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; font-size:.8rem}
+  .status-chip{display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:99px;
+               background:var(--surface2); border:1px solid var(--border); color:var(--text-dim)}
+  .status-chip b{color:var(--text)}
+  .status-chip.end_turn{background:var(--green-bg); border-color:rgba(76,175,80,.35); color:var(--green)}
+  .status-chip.tool_use{background:var(--amber-bg); border-color:rgba(255,179,0,.35); color:var(--amber)}
+  .progress{font-size:.76rem; color:var(--text-muted); margin-left:auto}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 5</span>
+      <div>
+        <h1>Agentic Loop Trace</h1>
+        <p>Building with Claude — Tool Use and Function Integration</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> A tool-driven agent isn't one request — it's several,
+    chained by a growing <code>messages</code> list, exactly like Module 4's conversation memory
+    but with <code>tool_use</code>/<code>tool_result</code> turns instead of just user/assistant
+    text. Step through a real Lab 5 trace below to see the list grow and <code>stop_reason</code>
+    change call by call. Fully offline — this replays a real captured trace, it doesn't call Claude.
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Validate invoice INV-2026-0102</h2></div>
+    <p class="sec-sub">This invoice has a deliberate GSTIN mismatch (see
+      <a href="../../shared/data/apex_bank_invoices.md">apex_bank_invoices.md</a>) — three tool
+      calls are needed before the agent can explain why it's on hold. Press
+      <strong>Step</strong> or <strong>Auto-play</strong> to advance the trace.</p>
+
+    <div class="card">
+      <div class="msg-track" id="msg-track"></div>
+
+      <div class="detail">
+        <h3 id="detail-title"></h3>
+        <p id="detail-explain"></p>
+        <pre class="code" id="detail-code"></pre>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="step-btn" onclick="step()">▶ Step</button>
+        <button class="btn secondary" id="auto-btn" onclick="toggleAuto()">⏩ Auto-play</button>
+        <button class="btn secondary" onclick="reset()">↺ Reset</button>
+        <span class="progress" id="progress"></span>
+      </div>
+
+      <div class="status-row">
+        <div class="status-chip" id="chip-calls">API calls so far: <b id="call-count">0</b></div>
+        <div class="status-chip" id="chip-stop">stop_reason: <b id="stop-reason">—</b></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-05-tool-use-and-function-integration.md">Module 5 — Tool
+  Use and Function Integration</a> · Building with Claude ·
+  see this trace as real code in <a href="../../day3/invoice_tool_agent.py">day3/invoice_tool_agent.py</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // One entry per MESSAGE appended to the list (not per API call) — matches
+  // the real messages.append() calls in day3/invoice_tool_agent.py's run_agent().
+  const TRACE = [
+    {
+      chip: 'U1', kind: 'user', callAfter: false, stop: '—',
+      title: 'messages[0] — the user turn',
+      explain: 'The only message that exists before the loop starts.',
+      code: '{"role": "user",\n "content": "Validate invoice INV-2026-0102 for payment."}'
+    },
+    {
+      chip: 'A1', kind: 'tool_use', callAfter: true, stop: 'tool_use',
+      title: 'API call #1 → messages[1] — assistant requests a tool',
+      explain: 'Claude has no invoice data yet, so its first move is get_invoice_details — exactly the constraint the system prompt states.',
+      code: '{"role": "assistant",\n "content": [{"type": "tool_use", "id": "toolu_01A",\n              "name": "get_invoice_details",\n              "input": {"invoice_id": "INV-2026-0102"}}]}'
+    },
+    {
+      chip: 'T1', kind: 'tool_result', callAfter: false, stop: 'tool_use',
+      title: 'messages[2] — your code\'s tool_result',
+      explain: 'get_invoice_details("INV-2026-0102") runs locally and its JSON return value is sent back, tagged with the SAME tool_use_id.',
+      code: '{"role": "user", "content": [\n  {"type": "tool_result", "tool_use_id": "toolu_01A",\n   "content": "{\\"vendor_id\\": \\"VEND-002\\", \\"gstin_on_invoice\\":\n               \\"07AABCM5678G1Z9\\", \\"amount_inr\\": 92000, ...}",\n   "is_error": false}\n]}'
+    },
+    {
+      chip: 'A2', kind: 'tool_use', callAfter: true, stop: 'tool_use',
+      title: 'API call #2 → messages[3] — assistant requests the vendor record',
+      explain: 'Now that Claude has vendor_id = "VEND-002" from the invoice, it calls get_vendor_details next — it still hasn\'t seen the vendor\'s registered GSTIN.',
+      code: '{"role": "assistant",\n "content": [{"type": "tool_use", "id": "toolu_01B",\n              "name": "get_vendor_details",\n              "input": {"vendor_id": "VEND-002"}}]}'
+    },
+    {
+      chip: 'T2', kind: 'tool_result', callAfter: false, stop: 'tool_use',
+      title: 'messages[4] — vendor tool_result',
+      explain: 'The vendor master\'s real GSTIN comes back: ...Z2 — one character different from the invoice\'s ...Z9.',
+      code: '{"role": "user", "content": [\n  {"type": "tool_result", "tool_use_id": "toolu_01B",\n   "content": "{\\"name\\": \\"Metro Legal Associates\\",\n               \\"gstin\\": \\"07AABCM5678G1Z2\\", \\"approved\\": true,\n               \\"empanelment_expiry\\": \\"2026-12-31\\"}",\n   "is_error": false}\n]}'
+    },
+    {
+      chip: 'A3', kind: 'tool_use', callAfter: true, stop: 'tool_use',
+      title: 'API call #3 → messages[5] — assistant requests TDS anyway',
+      explain: 'The system prompt says "always call calculate_tds before approving" — Claude still computes it so the final answer can state a net payable figure even for a held invoice.',
+      code: '{"role": "assistant",\n "content": [{"type": "tool_use", "id": "toolu_01C",\n              "name": "calculate_tds",\n              "input": {"amount_inr": 92000,\n                        "category": "professional_services"}}]}'
+    },
+    {
+      chip: 'T3', kind: 'tool_result', callAfter: false, stop: 'tool_use',
+      title: 'messages[6] — TDS tool_result',
+      explain: 'A pure calculation, no lookup — 10% of 92,000.',
+      code: '{"role": "user", "content": [\n  {"type": "tool_result", "tool_use_id": "toolu_01C",\n   "content": "{\\"tds_rate_pct\\": 10.0, \\"tds_amount_inr\\": 9200.0,\n               \\"net_payable_inr\\": 82800.0, \\"requires_signoff\\": false}",\n   "is_error": false}\n]}'
+    },
+    {
+      chip: 'A4', kind: 'text', callAfter: true, stop: 'end_turn',
+      title: 'API call #4 → messages[7] — final answer, loop exits',
+      explain: 'stop_reason is finally "end_turn" — the while loop in run_agent() breaks here. All three tool results together are what let Claude state the exact rule that was violated.',
+      code: '{"role": "assistant", "content": [{"type": "text", "text":\n  "... GSTIN on invoice (07AABCM5678G1Z9) does not match\\n' +
+        '   vendor master (07AABCM5678G1Z2).\\n\\n' +
+        'DECISION: HOLD - GSTIN mismatch between invoice and\\n' +
+        '          vendor master record"}]}'
+    },
+  ];
+
+  let idx = -1;      // -1 = nothing shown yet
+  let calls = 0;
+  let autoTimer = null;
+
+  function renderTrack(){
+    const track = document.getElementById('msg-track');
+    track.innerHTML = '';
+    TRACE.forEach((m, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'msg-chip ' + m.kind + (i <= idx ? ' shown' : '') + (i === idx ? ' active' : '');
+      chip.textContent = m.chip;
+      track.appendChild(chip);
+    });
+  }
+
+  function renderDetail(){
+    if (idx < 0){
+      document.getElementById('detail-title').textContent = 'Not started';
+      document.getElementById('detail-explain').textContent = 'Press Step to append messages[0], the user\'s request.';
+      document.getElementById('detail-code').textContent = '';
+      return;
+    }
+    const m = TRACE[idx];
+    document.getElementById('detail-title').textContent = m.title;
+    document.getElementById('detail-explain').textContent = m.explain;
+    document.getElementById('detail-code').textContent = m.code;
+  }
+
+  function renderStatus(){
+    document.getElementById('call-count').textContent = String(calls);
+    const stop = idx >= 0 ? TRACE[idx].stop : '—';
+    const chip = document.getElementById('chip-stop');
+    const label = document.getElementById('stop-reason');
+    label.textContent = stop;
+    chip.className = 'status-chip' + (stop === 'end_turn' ? ' end_turn' : stop === 'tool_use' ? ' tool_use' : '');
+    document.getElementById('progress').textContent = `Message ${Math.max(idx,0)+ (idx>=0?1:0)} of ${TRACE.length}`;
+    document.getElementById('step-btn').disabled = idx >= TRACE.length - 1;
+  }
+
+  function step(){
+    if (idx >= TRACE.length - 1) return;
+    idx++;
+    if (TRACE[idx].callAfter) calls++;
+    renderTrack();
+    renderDetail();
+    renderStatus();
+    if (idx >= TRACE.length - 1){
+      clearInterval(autoTimer); autoTimer = null;
+      document.getElementById('auto-btn').textContent = '⏩ Auto-play';
+    }
+  }
+
+  function reset(){
+    idx = -1; calls = 0;
+    clearInterval(autoTimer); autoTimer = null;
+    document.getElementById('auto-btn').textContent = '⏩ Auto-play';
+    renderTrack();
+    renderDetail();
+    renderStatus();
+  }
+
+  function toggleAuto(){
+    const btn = document.getElementById('auto-btn');
+    if (autoTimer){
+      clearInterval(autoTimer); autoTimer = null;
+      btn.textContent = '⏩ Auto-play';
+      return;
+    }
+    btn.textContent = '⏸ Stop';
+    autoTimer = setInterval(() => {
+      if (idx >= TRACE.length - 1){
+        clearInterval(autoTimer); autoTimer = null;
+        btn.textContent = '⏩ Auto-play';
+        return;
+      }
+      step();
+    }, 1100);
+  }
+
+  reset();
+</script>
+</body>
+</html>

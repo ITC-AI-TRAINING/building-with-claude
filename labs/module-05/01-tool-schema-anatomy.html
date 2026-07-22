@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tool Schema Anatomy | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --m1:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--m1); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.8rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  /* ── Section 1: step flow ───────────────────────────────────────────── */
+  .flow-track{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px}
+  .flow-node{
+    flex:1; min-width:104px; text-align:center; padding:10px 8px; border-radius:8px;
+    background:var(--surface2); border:1px solid var(--border); font-size:.7rem; color:var(--text-dim);
+    cursor:pointer; transition:all .2s; position:relative;
+  }
+  .flow-node .n{display:block; font-weight:700; font-size:.88rem; color:var(--text); margin-bottom:2px}
+  .flow-node.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .flow-node.active .n{color:var(--teal-lite)}
+  .flow-node.done{opacity:.55}
+  .flow-detail{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:18px;
+               margin-top:8px}
+  .flow-detail h3{font-size:.95rem; margin-bottom:8px; color:var(--teal-lite)}
+  .flow-detail p{font-size:.83rem; color:var(--text-dim); margin-bottom:12px}
+  .flow-controls{display:flex; gap:10px; margin-top:16px; align-items:center}
+  .flow-progress{font-size:.76rem; color:var(--text-muted); margin-left:auto}
+
+  /* ── Section 2: anatomy inspector ───────────────────────────────────── */
+  .anatomy-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:800px){.anatomy-grid{grid-template-columns:1fr}}
+  .field{
+    cursor:pointer; border-bottom:1px dashed rgba(38,166,154,.55); transition:background .15s;
+    padding:0 1px; border-radius:3px;
+  }
+  .field:hover, .field.on{background:var(--teal-glow); color:var(--teal-lite)}
+  .anatomy-desc{
+    margin-top:14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:14px 16px; font-size:.82rem; color:var(--text-dim); min-height:52px;
+  }
+  .anatomy-desc b{color:var(--teal-lite)}
+  .panel-label{font-size:.78rem; color:var(--text-muted); margin-bottom:6px}
+
+  /* ── Section 3: description comparison ──────────────────────────────── */
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg)}
+  .compare-card.bad{border-color:rgba(239,83,80,.4)}
+  .compare-card.good{border-color:rgba(76,175,80,.4)}
+  .compare-title{font-size:.85rem; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .compare-title.bad{color:var(--red)}
+  .compare-title.good{color:var(--green)}
+  .result-box{margin-top:14px; border-radius:8px; padding:12px 14px; font-size:.78rem; display:none}
+  .result-box.show{display:block; animation:fadein .3s ease}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)}}
+  .result-box.leak{background:var(--red-bg); border:1px solid rgba(239,83,80,.4); color:var(--red)}
+  .result-box.safe{background:var(--green-bg); border:1px solid rgba(76,175,80,.4); color:var(--green)}
+  .query-box{background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;
+             font-size:.83rem; margin-bottom:16px}
+  .query-box b{color:var(--teal-lite)}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 5</span>
+      <div>
+        <h1>Tool Schema Anatomy</h1>
+        <p>Building with Claude — Tool Use and Function Integration</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> A tool call is really three small, ordered contracts —
+    a schema you write, a <code>tool_use</code> block Claude emits, and a
+    <code>tool_result</code> your code sends back. Get the schema's wording wrong and the wrong
+    tool gets called, or the right tool with guessed arguments. Everything below is fully offline
+    and interactive — nothing sends a real request.
+  </div>
+
+  <!-- ══════════════ SECTION 1 — step-through flow ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Step through one tool call</h2></div>
+    <p class="sec-sub">Click a node below, or use Next/Prev, to walk through exactly what happens
+      between sending a request with <code>tools=[...]</code> and Claude finishing its answer.</p>
+
+    <div class="card">
+      <div class="flow-track" id="flow-track"></div>
+      <div class="flow-detail">
+        <h3 id="flow-title"></h3>
+        <p id="flow-explain"></p>
+        <pre class="code" id="flow-code"></pre>
+      </div>
+      <div class="flow-controls">
+        <button class="btn secondary" id="flow-prev" onclick="flowStep(-1)">← Prev</button>
+        <button class="btn" id="flow-next" onclick="flowStep(1)">Next →</button>
+        <span class="flow-progress" id="flow-progress"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 2 — anatomy inspector ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Anatomy of a tool definition &amp; its call</h2></div>
+    <p class="sec-sub">Click any highlighted field to see what it does. Left: the schema you write
+      once. Right: the two messages one call to that tool produces.</p>
+
+    <div class="card">
+      <div class="anatomy-grid">
+        <div>
+          <p class="panel-label">TOOL DEFINITION — one entry in tools=[...]</p>
+          <pre class="code">{
+  "<span class="field" data-k="name">name</span>": "get_vendor_details",
+  "<span class="field" data-k="description">description</span>": "Fetch one vendor's
+    master record ... by its exact
+    vendor ID, e.g. 'VEND-001'.",
+  "<span class="field" data-k="input_schema">input_schema</span>": {
+    "type": "object",
+    "<span class="field" data-k="properties">properties</span>": {
+      "vendor_id": {"type": "string"}
+    },
+    "<span class="field" data-k="required">required</span>": ["vendor_id"]
+  }
+}</pre>
+        </div>
+        <div>
+          <p class="panel-label">tool_use (Claude → you) then tool_result (you → Claude)</p>
+          <pre class="code">{
+  "<span class="field" data-k="type_use">type</span>": "tool_use",
+  "<span class="field" data-k="id">id</span>": "toolu_01Xy...",
+  "<span class="field" data-k="name2">name</span>": "get_vendor_details",
+  "<span class="field" data-k="input">input</span>": {"vendor_id": "VEND-001"}
+}
+{
+  "<span class="field" data-k="type_result">type</span>": "tool_result",
+  "<span class="field" data-k="tool_use_id">tool_use_id</span>": "toolu_01Xy...",
+  "<span class="field" data-k="content">content</span>": "{\"name\": \"SBI...\"}",
+  "<span class="field" data-k="is_error">is_error</span>": false
+}</pre>
+        </div>
+      </div>
+      <div class="anatomy-desc" id="anatomy-desc">👆 Click a field above to see what it controls or means.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 3 — description comparison ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">3</span><h2>Vague vs. specific tool descriptions</h2></div>
+    <p class="sec-sub">Two tools can share a database — what tells Claude which one to call is the
+      wording of <code>description</code>, not the schema's field types. Click
+      <strong>Simulate</strong> on each set and see which tool gets picked for the same request.</p>
+
+    <div class="query-box">Request: <b>"I don't have the invoice ID, only that the vendor is
+      'Metro Legal' — find and validate their most recent invoice."</b></div>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-title bad">❌ Vague descriptions</div>
+        <pre class="code">get_invoice_details:
+  "Gets invoice info."
+
+search_invoices:
+  "Finds invoices."</pre>
+        <button class="btn danger" style="background:#b71c1c" onclick="simulatePick('bad')">Simulate: pick a tool</button>
+        <div class="result-box leak" id="result-bad">
+          🚨 <strong>Wrong tool selected.</strong> Claude calls
+          <code>get_invoice_details(invoice_id="Metro Legal")</code> — with neither description
+          stating what kind of identifier each tool expects, "Metro Legal" gets passed to the tool
+          built for an exact ID. The lookup fails, and the agent has to recover mid-conversation
+          instead of choosing correctly the first time.
+        </div>
+      </div>
+
+      <div class="compare-card good">
+        <div class="compare-title good">✅ Specific descriptions</div>
+        <pre class="code">get_invoice_details:
+  "... by its exact invoice ID,
+   e.g. 'INV-2026-0101'."
+
+search_invoices:
+  "... use this when you have
+   a vendor name but not an
+   invoice ID."</pre>
+        <button class="btn secondary" onclick="simulatePick('good')">Simulate: pick a tool</button>
+        <div class="result-box safe" id="result-good">
+          ✅ <strong>Correct tool selected.</strong> "I don't have the invoice ID, only ... the
+          vendor" matches <code>search_invoices</code>'s description almost verbatim. Claude calls
+          <code>search_invoices(vendor_name="Metro Legal")</code> first, then chains
+          <code>get_invoice_details</code> on the returned ID — see this exact sequence in
+          <a href="../../day3/lab5.md">Lab 5</a>'s sixth request.
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-05-tool-use-and-function-integration.md">Module 5 — Tool
+  Use and Function Integration</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Section 1: step-through flow ─────────────────────────────────────
+  const STEPS = [
+    {
+      label: 'Define tools',
+      title: '1 · Write the tools=[...] list',
+      explain: 'Each entry is name + description + input_schema. This is a one-time contract — written once, read by Claude on every call where it\'s offered.',
+      code: 'TOOLS = [{\n    "name": "get_vendor_details",\n    "description": "Fetch one vendor\'s master record ...",\n    "input_schema": {"type": "object", "properties": {...}, "required": [...]},\n}]'
+    },
+    {
+      label: 'Send request',
+      title: '2 · client.messages.create(tools=TOOLS, messages=messages)',
+      explain: 'Same request shape as every earlier module, with one new parameter. Claude now has the OPTION to ask for a tool instead of answering directly.',
+      code: 'response = client.messages.create(\n    model=MODEL, max_tokens=1024,\n    system=SYSTEM_PROMPT, tools=TOOLS, messages=messages,\n)'
+    },
+    {
+      label: 'Claude decides',
+      title: '3 · Claude decides it needs data it doesn\'t have',
+      explain: 'Nothing happens on your machine yet — Claude has only decided WHICH tool fits, based entirely on your description text and the conversation so far.',
+      code: '# server-side reasoning — no code here'
+    },
+    {
+      label: 'tool_use block',
+      title: '4 · Response contains a tool_use block',
+      explain: 'stop_reason is "tool_use" — the 4th value from Module 1\'s table. response.content includes a block naming the tool and its arguments.',
+      code: 'response.stop_reason == "tool_use"\n# response.content includes:\n# {"type": "tool_use", "id": "toolu_01Xy...",\n#  "name": "get_vendor_details", "input": {"vendor_id": "VEND-001"}}'
+    },
+    {
+      label: 'You dispatch',
+      title: '5 · Your code — not Claude — runs the real function',
+      explain: 'Claude never executes anything. You look up the function by name and call it with the arguments Claude supplied.',
+      code: 'func = TOOL_FUNCTIONS[block.name]\nresult = func(**block.input)'
+    },
+    {
+      label: 'Build result',
+      title: '6 · Build and send back a tool_result',
+      explain: 'tool_use_id must match the block you\'re responding to. is_error tells Claude whether to treat the result as a failure to reason around.',
+      code: 'tool_results.append({\n    "type": "tool_result", "tool_use_id": block.id,\n    "content": json.dumps(result), "is_error": "error" in result,\n})\nmessages.append({"role": "user", "content": tool_results})'
+    },
+    {
+      label: 'Loop / finish',
+      title: '7 · Resend — loop until end_turn',
+      explain: 'The whole exchange repeats from step 2 with the growing messages list, until stop_reason is finally "end_turn" and there\'s a text answer to read.',
+      code: 'while response.stop_reason == "tool_use":\n    ...  # repeat steps 2–6\ntext = next(b.text for b in response.content if b.type == "text")'
+    },
+  ];
+
+  let flowIdx = 0;
+
+  function renderFlowTrack(){
+    const track = document.getElementById('flow-track');
+    track.innerHTML = '';
+    STEPS.forEach((s, i) => {
+      const node = document.createElement('div');
+      node.className = 'flow-node' + (i === flowIdx ? ' active' : i < flowIdx ? ' done' : '');
+      node.innerHTML = `<span class="n">${i+1}</span>${s.label}`;
+      node.onclick = () => { flowIdx = i; renderFlow(); };
+      track.appendChild(node);
+    });
+  }
+
+  function renderFlow(){
+    renderFlowTrack();
+    const s = STEPS[flowIdx];
+    document.getElementById('flow-title').textContent = s.title;
+    document.getElementById('flow-explain').textContent = s.explain;
+    document.getElementById('flow-code').textContent = s.code;
+    document.getElementById('flow-progress').textContent = `Step ${flowIdx+1} of ${STEPS.length}`;
+    document.getElementById('flow-prev').disabled = flowIdx === 0;
+    document.getElementById('flow-next').disabled = flowIdx === STEPS.length - 1;
+  }
+
+  function flowStep(delta){
+    flowIdx = Math.min(STEPS.length - 1, Math.max(0, flowIdx + delta));
+    renderFlow();
+  }
+
+  // ── Section 2: anatomy inspector ─────────────────────────────────────
+  const FIELD_DESC = {
+    name: 'The exact string Claude will echo back in every tool_use block for this tool — must match a key in your dispatch table (e.g. TOOL_FUNCTIONS) exactly.',
+    description: 'The single biggest lever over tool SELECTION. State WHEN to use the tool, not just what it returns — see Section 3 for what a vague one costs you.',
+    input_schema: 'A JSON Schema object describing the arguments Claude must supply — the same discipline as a Module 3 Pydantic model, aimed at the REQUEST instead of the response.',
+    properties: 'Each argument\'s name and type. Add a per-field "description" here too when a field\'s meaning isn\'t obvious from its name alone.',
+    required: 'Arguments Claude must supply before the tool_use block is even emitted — the API enforces this on its side, before your code ever runs.',
+    type_use: '"tool_use" — one of the content block types inside response.content, alongside "text". Iterate and check block.type, same habit as Module 1 §4.',
+    id: 'A unique ID for this specific tool call. You read it off the tool_use block and must echo it back unchanged as the matching tool_result\'s tool_use_id.',
+    name2: 'Which tool Claude wants — look this up in your dispatch table (e.g. TOOL_FUNCTIONS[block.name]) to find the function to run.',
+    input: 'The arguments Claude filled in, already validated against your input_schema — safe to pass directly as **block.input to a matching function signature.',
+    type_result: '"tool_result" — the content block type YOU send back, inside a {"role": "user", "content": [...]} message.',
+    tool_use_id: 'Must exactly match the id on the tool_use block you\'re responding to — a mismatch here is rejected by the API with a 400 error.',
+    content: 'The tool\'s output, as a JSON string (json.dumps(result)) or a list of content blocks — never a raw Python dict.',
+    is_error: 'Tells Claude whether this result represents a failure. Set it whenever your function returned/raised an error — silently returning bad data as if it succeeded is the most common tool-use bug.',
+  };
+
+  document.querySelectorAll('.field').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.field').forEach(f => f.classList.remove('on'));
+      el.classList.add('on');
+      const key = el.dataset.k;
+      document.getElementById('anatomy-desc').innerHTML = `<b>${key}</b> — ${FIELD_DESC[key] || ''}`;
+    });
+  });
+
+  // ── Section 3: description comparison ────────────────────────────────
+  function simulatePick(kind){
+    document.getElementById('result-' + kind).classList.add('show');
+  }
+
+  renderFlow();
+</script>
+</body>
+</html>

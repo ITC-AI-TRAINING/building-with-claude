@@ -1,0 +1,7 @@
+[project]
+name = "tool-schema-design"
+version = "0.1.0"
+description = "Module 5 demo — anatomy and dispatch of database, search, and calculator tool schemas, with no API calls (based on day3/invoice_tool_agent.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []

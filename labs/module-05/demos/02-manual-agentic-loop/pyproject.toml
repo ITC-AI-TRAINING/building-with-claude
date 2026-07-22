@@ -1,0 +1,10 @@
+[project]
+name = "manual-agentic-loop"
+version = "0.1.0"
+description = "Module 5 demo — the manual while-loop tool-use pattern, isolated to two tools and one failure case (based on day3/invoice_tool_agent.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.117.0",
+    "python-dotenv>=1.2.2",
+]

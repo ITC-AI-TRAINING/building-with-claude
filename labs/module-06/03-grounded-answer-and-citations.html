@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grounded Answer and Citations | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --m1:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--m1); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn.danger{background:#b71c1c}
+  button.btn.danger:hover{background:#c62828}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg)}
+  .compare-card.bad{border-color:rgba(239,83,80,.4)}
+  .compare-card.good{border-color:rgba(76,175,80,.4)}
+  .compare-title{font-size:.85rem; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .compare-title.bad{color:var(--red)}
+  .compare-title.good{color:var(--green)}
+  .result-box{margin-top:14px; border-radius:8px; padding:12px 14px; font-size:.78rem; display:none}
+  .result-box.show{display:block; animation:fadein .3s ease}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)}}
+  .result-box.leak{background:var(--red-bg); border:1px solid rgba(239,83,80,.4); color:var(--red)}
+  .result-box.safe{background:var(--green-bg); border:1px solid rgba(76,175,80,.4); color:var(--green)}
+  .query-box{background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;
+             font-size:.83rem; margin-bottom:16px}
+  .query-box b{color:var(--teal-lite)}
+
+  .rows{display:flex; flex-direction:column; gap:6px}
+  .aspect-row{
+    cursor:pointer; padding:10px 14px; border-radius:8px; background:var(--surface2);
+    border:1px solid var(--border); font-size:.85rem; transition:all .15s;
+  }
+  .aspect-row:hover, .aspect-row.on{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .aspect-desc{
+    margin-top:14px; background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
+    padding:14px 16px; font-size:.82rem; color:var(--text-dim); min-height:76px;
+  }
+  .aspect-desc .cols{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:8px}
+  .aspect-desc .cols b{color:var(--teal-lite); display:block; margin-bottom:4px}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 6</span>
+      <div>
+        <h1>Grounded Answer and Citations</h1>
+        <p>Building with Claude — Retrieval-Grounded Responses</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> Retrieval alone produces candidate context, not an answer —
+    grounding is the system-prompt discipline that forces Claude to answer only from that context
+    and show which chunk each claim came from. Everything below is fully offline — nothing sends a
+    real request.
+  </div>
+
+  <!-- ══════════════ SECTION 1 — ungrounded vs grounded ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Same question, with and without grounding</h2></div>
+    <p class="sec-sub">Click <strong>Simulate</strong> on each to see what changes when the
+      constraints from <code>day4/rag_assistant.py</code>'s <code>SYSTEM_PROMPT</code> are removed.</p>
+
+    <div class="query-box">Question: <b>"What is Apex Bank's minimum credit score for a personal
+      loan?"</b></div>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-title bad">❌ No grounding constraints</div>
+        <pre class="code">system = "You are a helpful
+  banking assistant."
+
+messages = [{"role": "user",
+  "content": question}]
+# no CONTEXT, no citation rule,
+# no fallback instruction</pre>
+        <button class="btn danger" style="background:#b71c1c" onclick="simulateGrounding('bad')">Simulate: ask without grounding</button>
+        <div class="result-box leak" id="result-bad">
+          🚨 <strong>Confident, uncited, and made up.</strong> "Apex Bank typically requires a
+          minimum credit score of around 650 for personal loans." Sounds plausible — but no chunk
+          says this, there's no [tag] to check, and the SOP's actual answer depends on applicant
+          type (680 salaried / 700 self-employed / 680 government), which this answer flattens
+          into a single guessed number.
+        </div>
+      </div>
+
+      <div class="compare-card good">
+        <div class="compare-title good">✅ With grounding constraints</div>
+        <pre class="code">system = SYSTEM_PROMPT  # "Answer
+  ONLY from CONTEXT... cite the
+  source tag... fall back if the
+  context doesn't contain the
+  answer..."
+
+messages = [{"role": "user",
+  "content": f"CONTEXT:\n{context}
+  \n\nQUESTION: {question}"}]</pre>
+        <button class="btn secondary" onclick="simulateGrounding('good')">Simulate: ask with grounding</button>
+        <div class="result-box safe" id="result-good">
+          ✅ <strong>Cited and traceable.</strong> "The Loan Processing SOP doesn't define a
+          'personal loan' category specifically — it sets minimums by applicant type: 680 for
+          salaried applicants, 700 for self-employed, and 680 for government employees [sop-0]."
+          Every number traces to a real chunk you can go open and check.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 2 — the retrieval-check gate ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>The retrieval check runs BEFORE Claude sees the question</h2></div>
+    <p class="sec-sub">Two questions, same assistant. Click <strong>Simulate</strong> on each to see
+      whether <code>answer_question()</code> ever reaches <code>client.messages.create()</code>.</p>
+
+    <div class="compare-grid">
+      <div class="compare-card good">
+        <div class="compare-title good">✅ In-scope question</div>
+        <pre class="code">query = "What is the maximum LTV
+  for a home loan?"
+
+hits[0]["distance"] = 0.091
+retrieval_check(hits)
+  # 0.091 <= 0.45  ->  True</pre>
+        <button class="btn secondary" onclick="simulateGate('pass')">Simulate: run the gate</button>
+        <div class="result-box safe" id="result-pass">
+          ✅ <strong>Gate passes — 1 Claude call made.</strong> The Credit Policy chunk about LTV is
+          close enough to trust; <code>answer_question()</code> builds the context and calls
+          <code>client.messages.create()</code>, producing the cited answer from Section 1.
+        </div>
+      </div>
+
+      <div class="compare-card bad">
+        <div class="compare-title bad">❌ Out-of-scope question</div>
+        <pre class="code">query = "What is Apex Bank's
+  stance on cryptocurrency
+  lending?"
+
+hits[0]["distance"] = 0.81
+retrieval_check(hits)
+  # 0.81 <= 0.45  ->  False</pre>
+        <button class="btn danger" style="background:#b71c1c" onclick="simulateGate('fail')">Simulate: run the gate</button>
+        <div class="result-box leak" id="result-fail">
+          🚫 <strong>Gate fails — 0 Claude calls made.</strong> Nothing in the SOP or Credit Policy
+          is close to this topic; <code>answer_question()</code> returns the fixed
+          <code>NO_CONTEXT_FALLBACK</code> string immediately — no API cost spent on a question the
+          documents can't answer anyway.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 3 — retrieval check vs faithfulness judge ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">3</span><h2>Compare an aspect: retrieval check vs. faithfulness judge</h2></div>
+    <p class="sec-sub">Click a row to compare this module's retrieval check against Module 7's
+      LLM-as-judge faithfulness check — different, complementary layers, not two names for the
+      same thing.</p>
+
+    <div class="card">
+      <div class="rows" id="aspect-rows"></div>
+      <div class="aspect-desc" id="aspect-desc">👆 Click a row above to compare.</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-06-retrieval-grounded-responses.md">Module 6 — Retrieval-
+  Grounded Responses</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Section 1 ─────────────────────────────────────────────────────────
+  function simulateGrounding(kind){
+    document.getElementById('result-' + kind).classList.add('show');
+  }
+
+  // ── Section 2 ─────────────────────────────────────────────────────────
+  function simulateGate(kind){
+    document.getElementById('result-' + kind).classList.add('show');
+  }
+
+  // ── Section 3 ─────────────────────────────────────────────────────────
+  const ASPECTS = [
+    {
+      label: 'What it checks',
+      retrieval: 'A single number: is the nearest retrieved chunk\'s distance below a threshold?',
+      faithfulness: 'Whether the generated answer\'s claims are actually supported by its cited chunk\'s text.',
+    },
+    {
+      label: 'When it runs',
+      retrieval: 'Before the API call — can prevent an ungrounded answer from ever being generated.',
+      faithfulness: 'After the answer is generated — can only detect a problem, not prevent the call.',
+    },
+    {
+      label: 'How it decides',
+      retrieval: 'Pure math on a distance value already returned by the vector store — no extra model call.',
+      faithfulness: 'A second LLM call that reads the answer and its cited context and judges whether they agree.',
+    },
+    {
+      label: 'What it catches',
+      retrieval: '"Nothing relevant was retrieved at all" — a corpus-coverage gap.',
+      faithfulness: '"The chunk was topically close but doesn\'t actually say what the answer claims" — a generation error.',
+    },
+    {
+      label: 'Cost',
+      retrieval: 'Effectively free — a comparison on a number you already have.',
+      faithfulness: 'One additional Claude call per answer being evaluated.',
+    },
+  ];
+
+  function renderAspectRows(){
+    const box = document.getElementById('aspect-rows');
+    box.innerHTML = '';
+    ASPECTS.forEach((a, i) => {
+      const row = document.createElement('div');
+      row.className = 'aspect-row';
+      row.textContent = a.label;
+      row.onclick = () => {
+        document.querySelectorAll('.aspect-row').forEach(r => r.classList.remove('on'));
+        row.classList.add('on');
+        document.getElementById('aspect-desc').innerHTML =
+          `<b style="color:var(--teal-lite)">${a.label}</b>` +
+          `<div class="cols"><div><b>Retrieval check (Module 6)</b>${a.retrieval}</div><div><b>Faithfulness judge (Module 7)</b>${a.faithfulness}</div></div>`;
+      };
+      box.appendChild(row);
+    });
+  }
+
+  renderAspectRows();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[project]
+name = "tool-runner-beta"
+version = "0.1.0"
+description = "Module 5 demo — the beta tool_runner() pattern, same two-tool scenario as 02-manual-agentic-loop (based on day3/invoice_tool_agent_beta.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.117.0",
+    "python-dotenv>=1.2.2",
+]

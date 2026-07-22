@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manual Loop vs. Tool Runner | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --m1:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--m1); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn.danger{background:#b71c1c}
+  button.btn.danger:hover{background:#c62828}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg)}
+  .compare-title{font-size:.85rem; font-weight:700; margin-bottom:10px; color:var(--teal-lite)}
+  .result-box{margin-top:14px; border-radius:8px; padding:12px 14px; font-size:.78rem; display:none}
+  .result-box.show{display:block; animation:fadein .3s ease}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)}}
+  .result-box.safe{background:var(--green-bg); border:1px solid rgba(76,175,80,.4); color:var(--green)}
+  .result-box.leak{background:var(--red-bg); border:1px solid rgba(239,83,80,.4); color:var(--red)}
+
+  .rows{display:flex; flex-direction:column; gap:6px}
+  .aspect-row{
+    cursor:pointer; padding:10px 14px; border-radius:8px; background:var(--surface2);
+    border:1px solid var(--border); font-size:.85rem; transition:all .15s;
+  }
+  .aspect-row:hover, .aspect-row.on{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .aspect-desc{
+    margin-top:14px; background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
+    padding:14px 16px; font-size:.82rem; color:var(--text-dim); min-height:76px;
+  }
+  .aspect-desc .cols{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:8px}
+  .aspect-desc .cols b{color:var(--teal-lite); display:block; margin-bottom:4px}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 5</span>
+      <div>
+        <h1>Manual Loop vs. Tool Runner</h1>
+        <p>Building with Claude — Tool Use and Function Integration</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> <code>day3/invoice_tool_agent.py</code> and
+    <code>invoice_tool_agent_beta.py</code> solve the exact same task and reach the exact same
+    decisions — the beta <code>tool_runner()</code> doesn't change WHAT happens, only who writes
+    the loop and how a failure is expressed. Everything below is fully offline — nothing sends a
+    real request.
+  </div>
+
+  <!-- ══════════════ SECTION 1 — error handling comparison ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Same failure, two styles</h2></div>
+    <p class="sec-sub">Both agents are asked to look up a vendor ID that doesn't exist
+      (<code>VEND-404</code>). Click <strong>Simulate</strong> on each to see how that failure is
+      expressed in code — and confirm both still end up as the same wire-format
+      <code>tool_result</code>.</p>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="compare-title">Manual — invoice_tool_agent.py</div>
+        <pre class="code">def get_vendor_details(vendor_id):
+    vendor = VENDOR_DB.get(vendor_id)
+    if vendor is None:
+        return {"error": f"No vendor found "
+                          f"with ID '{vendor_id}'"}
+    ...
+
+# in the loop:
+result = func(**block.input)
+tool_results.append({
+    "type": "tool_result",
+    "tool_use_id": block.id,
+    "content": json.dumps(result),
+    "is_error": "error" in result,
+})</pre>
+        <button class="btn secondary" onclick="simulateFail('manual')">Simulate: VEND-404 lookup</button>
+        <div class="result-box safe" id="result-manual">
+          ✅ <code>get_vendor_details("VEND-404")</code> returns
+          <code>{"error": "No vendor found with ID 'VEND-404'"}</code>. The loop itself checks
+          <code>"error" in result</code> and sets <code>is_error: true</code> — <strong>you write
+          this check yourself, every time.</strong>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <div class="compare-title">Beta — invoice_tool_agent_beta.py</div>
+        <pre class="code">@beta_tool
+def get_vendor_details(vendor_id: str) -> str:
+    """Fetch one vendor's record...
+
+    Args:
+        vendor_id: Exact vendor ID.
+    """
+    vendor = VENDOR_DB.get(vendor_id)
+    if vendor is None:
+        raise ToolError(
+            f"No vendor found with ID "
+            f"'{vendor_id}'"
+        )
+    return json.dumps({...})
+
+# no loop code — the runner catches
+# ToolError and builds tool_result itself</pre>
+        <button class="btn secondary" onclick="simulateFail('beta')">Simulate: VEND-404 lookup</button>
+        <div class="result-box safe" id="result-beta">
+          ✅ <code>raise ToolError("No vendor found with ID 'VEND-404'")</code> is caught by
+          <code>tool_runner()</code>, which builds the identical
+          <code>{"type": "tool_result", ..., "is_error": true}</code> message for you —
+          <strong>same wire format, no manual check written.</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 2 — the real bug ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>A real bug this guide warns about</h2></div>
+    <p class="sec-sub">Every beta tool in this lab ends with <code>return json.dumps({...})</code>
+      — a deliberate choice, not decoration. Click below to see what actually happens if you
+      return the raw dict instead (this is the real error text hit while building this lab).</p>
+
+    <div class="card">
+      <pre class="code">@beta_tool
+def calculate_tds(amount_inr: float, category: str) -> dict:   # ← "-> dict", returning the dict directly
+    ...
+    return {
+        "tds_rate_pct": rate * 100,
+        "tds_amount_inr": tds_amount,
+        "net_payable_inr": round(amount_inr - tds_amount, 2),
+    }</pre>
+      <button class="btn danger" onclick="simulateBug()">Simulate: run it against the API</button>
+      <div class="result-box leak" id="result-bug">
+        🚨 <strong>400 invalid_request_error</strong> —
+        <code>messages.2.content.0.tool_result.content: Found an object, but `tool_result`
+        content must either be a string or a list of content blocks.</code>
+        <div style="margin-top:8px">The beta runner does not serialize a returned <code>dict</code>
+        for you. Every <code>@beta_tool</code> function in this lab must end with
+        <code>return json.dumps(result)</code> — a plain <code>str</code> — exactly like the
+        manual loop's <code>"content": json.dumps(result)</code> line.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 3 — aspect comparison ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">3</span><h2>Compare an aspect</h2></div>
+    <p class="sec-sub">Click a row to compare how the manual loop and the beta runner each handle
+      that aspect of tool use.</p>
+
+    <div class="card">
+      <div class="rows" id="aspect-rows"></div>
+      <div class="aspect-desc" id="aspect-desc">👆 Click a row above to compare.</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-05-tool-use-and-function-integration.md">Module 5 — Tool
+  Use and Function Integration</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Section 1 ─────────────────────────────────────────────────────────
+  function simulateFail(kind){
+    document.getElementById('result-' + kind).classList.add('show');
+  }
+
+  // ── Section 2 ─────────────────────────────────────────────────────────
+  function simulateBug(){
+    document.getElementById('result-bug').classList.add('show');
+  }
+
+  // ── Section 3 ─────────────────────────────────────────────────────────
+  const ASPECTS = [
+    {
+      label: 'Schema definition',
+      manual: 'A hand-written input_schema dict in the TOOLS list — you author the JSON Schema yourself.',
+      beta: 'Inferred automatically from the function\'s type hints and its docstring\'s Args: section.',
+    },
+    {
+      label: 'Loop control',
+      manual: 'You write the while True loop, check stop_reason, and append every message yourself.',
+      beta: 'client.beta.messages.tool_runner(...).until_done() drives every round trip internally.',
+    },
+    {
+      label: 'Tool failure',
+      manual: 'Return {"error": "..."} and set "is_error": "error" in result yourself in the loop.',
+      beta: 'raise ToolError("...") — the runner catches it and builds the tool_result for you.',
+    },
+    {
+      label: 'Tool return value',
+      manual: 'Any JSON-serialisable value; you call json.dumps(result) once, at the loop\'s call site.',
+      beta: 'Must be str or content blocks — call json.dumps(...) inside every tool function itself.',
+    },
+    {
+      label: 'When to reach for it',
+      manual: 'Learning the mechanics; need custom control per iteration (logging, partial results).',
+      beta: 'Production code where the loop shape is standard and less boilerplate is worth it.',
+    },
+  ];
+
+  function renderAspectRows(){
+    const box = document.getElementById('aspect-rows');
+    box.innerHTML = '';
+    ASPECTS.forEach((a, i) => {
+      const row = document.createElement('div');
+      row.className = 'aspect-row';
+      row.textContent = a.label;
+      row.onclick = () => {
+        document.querySelectorAll('.aspect-row').forEach(r => r.classList.remove('on'));
+        row.classList.add('on');
+        document.getElementById('aspect-desc').innerHTML =
+          `<b style="color:var(--teal-lite)">${a.label}</b>` +
+          `<div class="cols"><div><b>Manual</b>${a.manual}</div><div><b>Beta tool_runner</b>${a.beta}</div></div>`;
+      };
+      box.appendChild(row);
+    });
+  }
+
+  renderAspectRows();
+</script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chunking and Embedding Space | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --m1:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--m1); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn:disabled{opacity:.4; cursor:not-allowed}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.8rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  /* ── Section 1: step flow ───────────────────────────────────────────── */
+  .flow-track{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px}
+  .flow-node{
+    flex:1; min-width:104px; text-align:center; padding:10px 8px; border-radius:8px;
+    background:var(--surface2); border:1px solid var(--border); font-size:.7rem; color:var(--text-dim);
+    cursor:pointer; transition:all .2s; position:relative;
+  }
+  .flow-node .n{display:block; font-weight:700; font-size:.88rem; color:var(--text); margin-bottom:2px}
+  .flow-node.active{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .flow-node.active .n{color:var(--teal-lite)}
+  .flow-node.done{opacity:.55}
+  .flow-detail{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:18px;
+               margin-top:8px}
+  .flow-detail h3{font-size:.95rem; margin-bottom:8px; color:var(--teal-lite)}
+  .flow-detail p{font-size:.83rem; color:var(--text-dim); margin-bottom:12px}
+  .flow-controls{display:flex; gap:10px; margin-top:16px; align-items:center}
+  .flow-progress{font-size:.76rem; color:var(--text-muted); margin-left:auto}
+
+  /* ── Section 2: anatomy inspector ───────────────────────────────────── */
+  .anatomy-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:800px){.anatomy-grid{grid-template-columns:1fr}}
+  .field{
+    cursor:pointer; border-bottom:1px dashed rgba(38,166,154,.55); transition:background .15s;
+    padding:0 1px; border-radius:3px;
+  }
+  .field:hover, .field.on{background:var(--teal-glow); color:var(--teal-lite)}
+  .anatomy-desc{
+    margin-top:14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:14px 16px; font-size:.82rem; color:var(--text-dim); min-height:52px;
+  }
+  .anatomy-desc b{color:var(--teal-lite)}
+  .panel-label{font-size:.78rem; color:var(--text-muted); margin-bottom:6px}
+
+  /* ── Section 3: overlap comparison ──────────────────────────────────── */
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg)}
+  .compare-card.bad{border-color:rgba(239,83,80,.4)}
+  .compare-card.good{border-color:rgba(76,175,80,.4)}
+  .compare-title{font-size:.85rem; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .compare-title.bad{color:var(--red)}
+  .compare-title.good{color:var(--green)}
+  .result-box{margin-top:14px; border-radius:8px; padding:12px 14px; font-size:.78rem; display:none}
+  .result-box.show{display:block; animation:fadein .3s ease}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)}}
+  .result-box.leak{background:var(--red-bg); border:1px solid rgba(239,83,80,.4); color:var(--red)}
+  .result-box.safe{background:var(--green-bg); border:1px solid rgba(76,175,80,.4); color:var(--green)}
+  .query-box{background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;
+             font-size:.83rem; margin-bottom:16px}
+  .query-box b{color:var(--teal-lite)}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 6</span>
+      <div>
+        <h1>Chunking and Embedding Space</h1>
+        <p>Building with Claude — Retrieval-Grounded Responses</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> Before anything can be retrieved, a document has to become
+    a set of small, addressable, embedded chunks. Get the chunk size or overlap wrong and a fact
+    can become unretrievable no matter how good the vector store is. Everything below is fully
+    offline and interactive — nothing sends a real request.
+  </div>
+
+  <!-- ══════════════ SECTION 1 — step-through flow ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Step through the index-time pipeline</h2></div>
+    <p class="sec-sub">Click a node below, or use Next/Prev, to walk through exactly what happens
+      between loading a raw document and it becoming searchable rows in ChromaDB.</p>
+
+    <div class="card">
+      <div class="flow-track" id="flow-track"></div>
+      <div class="flow-detail">
+        <h3 id="flow-title"></h3>
+        <p id="flow-explain"></p>
+        <pre class="code" id="flow-code"></pre>
+      </div>
+      <div class="flow-controls">
+        <button class="btn secondary" id="flow-prev" onclick="flowStep(-1)">← Prev</button>
+        <button class="btn" id="flow-next" onclick="flowStep(1)">Next →</button>
+        <span class="flow-progress" id="flow-progress"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 2 — anatomy inspector ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Anatomy of a chunk &amp; its Chroma record</h2></div>
+    <p class="sec-sub">Click any highlighted field to see what it does. Left: the <code>Chunk</code>
+      object <code>chunk_document()</code> builds. Right: what actually gets passed into
+      <code>collection.add()</code>.</p>
+
+    <div class="card">
+      <div class="anatomy-grid">
+        <div>
+          <p class="panel-label">Chunk — one dataclass instance</p>
+          <pre class="code">Chunk(
+  <span class="field" data-k="text">text</span>=
+    "Maximum loan-to-value ratio for
+     home loans is 90% up to INR 30
+     lakhs, 80% between 30 and 75
+     lakhs, and 75% above 75 lakhs.",
+  <span class="field" data-k="doc_id">doc_id</span>="policy",
+  <span class="field" data-k="section">section</span>="Credit Policy",
+  <span class="field" data-k="chunk_index">chunk_index</span>=1,
+)</pre>
+        </div>
+        <div>
+          <p class="panel-label">collection.add(...) — one row in ChromaDB</p>
+          <pre class="code">collection.add(
+  <span class="field" data-k="ids">ids</span>=["policy-1"],
+  <span class="field" data-k="embeddings">embeddings</span>=[[0.0123, -0.0871,
+                 ... 1536 numbers]],
+  <span class="field" data-k="documents">documents</span>=["Maximum loan-to-value
+                 ratio for home loans..."],
+  <span class="field" data-k="metadatas">metadatas</span>=[{"doc_id": "policy",
+                 "section": "Credit Policy",
+                 "chunk_index": 1}],
+)</pre>
+        </div>
+      </div>
+      <div class="anatomy-desc" id="anatomy-desc">👆 Click a field above to see what it controls or means.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 3 — overlap comparison ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">3</span><h2>Why chunk overlap exists</h2></div>
+    <p class="sec-sub">The same SOP sentence, chunked two ways. Click <strong>Simulate</strong> on
+      each to see whether the exception clause survives intact in at least one chunk.</p>
+
+    <div class="query-box">Source text: <b>"A credit score below the applicable minimum is
+      grounds for automatic decline. If the credit bureau is temporarily unavailable, the
+      application must be referred to the Credit Committee, not declined."</b></div>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-title bad">❌ chunk_size=20, overlap=0</div>
+        <pre class="code">chunk 0 (words 0-19):
+  "...must be referred to the"
+
+chunk 1 (words 20-39):
+  "Credit Committee, not declined."</pre>
+        <button class="btn danger" style="background:#b71c1c" onclick="simulateOverlap('bad')">Simulate: retrieve chunk 0 only</button>
+        <div class="result-box leak" id="result-bad">
+          🚨 <strong>Exception clause split across the boundary.</strong> A query about "what
+          happens if the credit bureau is unavailable" retrieves chunk 0, which ends at "...must be
+          referred to the" — the actual outcome ("Credit Committee, not declined") is in chunk 1,
+          which the vector store may or may not also return. The answer is incomplete either way.
+        </div>
+      </div>
+
+      <div class="compare-card good">
+        <div class="compare-title good">✅ chunk_size=20, overlap=8</div>
+        <pre class="code">chunk 0 (words 0-19):
+  "...must be referred to the"
+
+chunk 1 (words 12-31, 8-word overlap):
+  "...referred to the Credit
+   Committee, not declined."</pre>
+        <button class="btn secondary" onclick="simulateOverlap('good')">Simulate: retrieve chunk 0 only</button>
+        <div class="result-box safe" id="result-good">
+          ✅ <strong>Exception clause intact in chunk 1.</strong> Even if the vector store only
+          returns one of the two chunks, chunk 1's 8-word overlap window carries the full
+          "referred to the Credit Committee, not declined" clause — the answer doesn't depend on
+          getting both chunks back.
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-06-retrieval-grounded-responses.md">Module 6 — Retrieval-
+  Grounded Responses</a> · Building with Claude
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Section 1: step-through flow ─────────────────────────────────────
+  const STEPS = [
+    {
+      label: 'Load doc',
+      title: '1 · Load a document as plain text',
+      explain: 'day3/rag_pipeline.py reads each file in DOCS — the Loan Processing SOP and the Credit Policy Manual — as one big string.',
+      code: 'text = doc["path"].read_text()'
+    },
+    {
+      label: 'Chunk',
+      title: '2 · chunk_text() — fixed-size windows with overlap',
+      explain: 'The word list is sliced into 500-word windows that advance by chunk_size - overlap each step, so consecutive windows share 50 words.',
+      code: 'def chunk_text(text, chunk_size=500, overlap=50):\n    words = text.split()\n    step = chunk_size - overlap\n    for i in range(0, len(words), step):\n        yield " ".join(words[i:i+chunk_size])'
+    },
+    {
+      label: 'Chunk objects',
+      title: '3 · chunk_document() — wrap with metadata',
+      explain: 'Each raw chunk becomes a Chunk with doc_id, section, and chunk_index attached — this is what makes a later citation like [policy-1] traceable back to a real place.',
+      code: 'Chunk(text=text, doc_id="policy",\n      section="Credit Policy", chunk_index=1)'
+    },
+    {
+      label: 'Batch',
+      title: '4 · Collect all chunks from both documents',
+      explain: 'build_index() accumulates every chunk from every document into one flat list before embedding — embedding is batched, not done one chunk at a time.',
+      code: 'all_chunks.extend(chunks)\n# ... repeated for each doc in DOCS'
+    },
+    {
+      label: 'Embed',
+      title: '5 · embed() — OpenAI text-embedding-3-small',
+      explain: 'The Claude API has no embeddings endpoint. Chunks are sent to OpenAI in batches of 100 and come back as 1536-dimensional vectors, one per chunk, in the same order.',
+      code: 'result = openai.OpenAI().embeddings.create(\n    input=[c.text for c in batch],\n    model="text-embedding-3-small",\n)\nvectors = [item.embedding for item in result.data]'
+    },
+    {
+      label: 'Vectors',
+      title: '6 · One vector per chunk, same order as the batch',
+      explain: 'Nothing is stored yet — these vectors exist only in memory until the next step writes them into Chroma.',
+      code: '# vectors[i] corresponds to batch[i]\nlen(vectors) == len(batch)  # True'
+    },
+    {
+      label: 'Store',
+      title: '7 · collection.add() — persisted into ChromaDB',
+      explain: 'ids, embeddings, documents, and metadatas all go in together, one entry per chunk — see Section 2 for what each of these four arguments is for.',
+      code: 'collection.add(\n    ids=[c.id for c in batch],\n    embeddings=vectors,\n    documents=[c.text for c in batch],\n    metadatas=[{"doc_id": c.doc_id, ...} for c in batch],\n)'
+    },
+  ];
+
+  let flowIdx = 0;
+
+  function renderFlowTrack(){
+    const track = document.getElementById('flow-track');
+    track.innerHTML = '';
+    STEPS.forEach((s, i) => {
+      const node = document.createElement('div');
+      node.className = 'flow-node' + (i === flowIdx ? ' active' : i < flowIdx ? ' done' : '');
+      node.innerHTML = `<span class="n">${i+1}</span>${s.label}`;
+      node.onclick = () => { flowIdx = i; renderFlow(); };
+      track.appendChild(node);
+    });
+  }
+
+  function renderFlow(){
+    renderFlowTrack();
+    const s = STEPS[flowIdx];
+    document.getElementById('flow-title').textContent = s.title;
+    document.getElementById('flow-explain').textContent = s.explain;
+    document.getElementById('flow-code').textContent = s.code;
+    document.getElementById('flow-progress').textContent = `Step ${flowIdx+1} of ${STEPS.length}`;
+    document.getElementById('flow-prev').disabled = flowIdx === 0;
+    document.getElementById('flow-next').disabled = flowIdx === STEPS.length - 1;
+  }
+
+  function flowStep(delta){
+    flowIdx = Math.min(STEPS.length - 1, Math.max(0, flowIdx + delta));
+    renderFlow();
+  }
+
+  // ── Section 2: anatomy inspector ─────────────────────────────────────
+  const FIELD_DESC = {
+    text: 'The chunk\'s actual words — everything downstream (embedding, display, grounding context) is built from this string.',
+    doc_id: 'Which source document this chunk came from ("sop" or "policy") — the first half of every citation tag, e.g. the "policy" in [policy-1].',
+    section: 'A human-readable label ("Credit Policy") shown alongside citations so an answer reads naturally, not just as a raw tag.',
+    chunk_index: 'This chunk\'s position within its document — the second half of the citation tag, and part of the stable Chroma record ID (doc_id-chunk_index).',
+    ids: 'f"{doc_id}-{chunk_index}" for every chunk in the batch — re-running the pipeline with the same IDs upserts cleanly instead of duplicating rows.',
+    embeddings: 'The 1536-dimensional vectors computed in step 5 — precomputed by us, never generated by Chroma\'s own default embedding function.',
+    documents: 'The raw chunk text again, stored alongside the vector purely so query() can hand it back to you without a second lookup.',
+    metadatas: 'doc_id / section / chunk_index carried through as a dict per chunk — this is what a retrieved hit\'s metadata looks like at query time.',
+  };
+
+  document.querySelectorAll('.field').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.field').forEach(f => f.classList.remove('on'));
+      el.classList.add('on');
+      const key = el.dataset.k;
+      document.getElementById('anatomy-desc').innerHTML = `<b>${key}</b> — ${FIELD_DESC[key] || ''}`;
+    });
+  });
+
+  // ── Section 3: overlap comparison ────────────────────────────────────
+  function simulateOverlap(kind){
+    document.getElementById('result-' + kind).classList.add('show');
+  }
+
+  renderFlow();
+</script>
+</body>
+</html>

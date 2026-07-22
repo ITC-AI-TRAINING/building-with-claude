@@ -1,0 +1,11 @@
+[project]
+name = "chroma-vector-store"
+version = "0.1.0"
+description = "Module 6 demo — ChromaDB add()/query() mechanics in isolation, with real OpenAI embeddings (based on day3/rag_pipeline.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.30",
+    "chromadb>=0.5",
+    "python-dotenv>=1.0",
+]

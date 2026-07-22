@@ -1,0 +1,7 @@
+[project]
+name = "chunking-and-embeddings"
+version = "0.1.0"
+description = "Module 6 demo — fixed-size chunking with overlap, and what an embedding's closeness means, with no API calls (based on day3/rag_pipeline.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
