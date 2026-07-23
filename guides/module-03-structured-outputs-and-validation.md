@@ -465,14 +465,15 @@ flowchart LR
 | 4. Conversation and Context Management | Apex Bank loan intake conversation manager | `day2/` (`loan_intake_manager.py`, `lab4.md`) |
 | 5. Tool Use and Function Integration | Invoice validation + vendor lookup | `day3/` |
 | 6. Retrieval-Grounded Responses (RAG) | Finance SOP assistant | `day3/` – `day4/` |
-| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` – `day5/` |
+| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` |
 | 8. Applied Mini-Project | Telecom support triage assistant | `day5/` |
 | 9. Exit Test | Scenario assessment | — |
 
 > Rows 3–4 are corrected from earlier drafts of this table (which followed the course PDF's
 > generic retail/telecom hands-on cells) to match what's actually built in `day2/` — see
-> `CLAUDE.md`'s finance-domain convention. Rows 5–8 describe `day3/`–`day5/`, which don't exist in
-> this repo yet; double-check their case study against the real files once those folders are built.
+> `CLAUDE.md`'s finance-domain convention. Rows 5–7 are now confirmed against real files in
+> `day3/`–`day4/` — row 8 still describes `day5/` content that doesn't exist in this repo yet;
+> double-check its case study against the real files once that folder is built.
 
 **Reference material:** [`module-02-prompt-engineering-for-applications.md`](module-02-prompt-engineering-for-applications.md)
 (the prompting habits this module builds on) · [`SETUP.md`](../SETUP.md) (environment setup) ·

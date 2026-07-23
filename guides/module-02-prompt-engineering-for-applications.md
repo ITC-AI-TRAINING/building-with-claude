@@ -504,7 +504,7 @@ flowchart LR
 | 4. Conversation and Context Management | Apex Bank loan intake conversation manager | `day2/` (`loan_intake_manager.py`, `lab4.md`) |
 | 5. Tool Use and Function Integration | Invoice validation + vendor lookup | `day3/` |
 | 6. Retrieval-Grounded Responses (RAG) | Finance SOP assistant | `day3/` – `day4/` |
-| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` – `day5/` |
+| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` |
 | 8. Applied Mini-Project | Telecom support triage assistant | `day5/` |
 | 9. Exit Test | Scenario assessment | — |
 
@@ -512,8 +512,9 @@ flowchart LR
 > conversation management), not the course PDF's generic retail/telecom hands-on cells for those
 > modules — see `CLAUDE.md`'s finance-domain convention and the
 > [Module 3 guide](module-03-structured-outputs-and-validation.md#where-module-3-fits-in-the-course)
-> for the full note. Rows 5–8 describe `day3/`–`day5/`, which don't exist yet — worth
-> double-checking against the real files once those folders are built.
+> for the full note. Rows 5–7 are now confirmed against real files in `day3/`–`day4/` — row 8
+> still describes `day5/` content that doesn't exist yet, worth double-checking again once that
+> folder is built.
 
 **Reference material:** [`module-01-api-setup-and-secure-integration.md`](module-01-api-setup-and-secure-integration.md)
 (the pipe this module fills) · [`SETUP.md`](../SETUP.md) (environment setup) ·

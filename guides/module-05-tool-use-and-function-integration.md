@@ -433,15 +433,15 @@ flowchart LR
 | 4. Conversation and Context Management | Apex Bank loan intake conversation manager | `day2/` (`loan_intake_manager.py`, `lab4.md`) |
 | 5. Tool Use and Function Integration | Apex Bank invoice validation + vendor lookup | `day3/` (`invoice_tool_agent.py`, `invoice_tool_agent_beta.py`, `lab5.md`) |
 | 6. Retrieval-Grounded Responses (RAG) | Finance SOP assistant | `day3/` – `day4/` |
-| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` – `day5/` |
+| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` |
 | 8. Applied Mini-Project | Telecom support triage assistant | `day5/` |
 | 9. Exit Test | Scenario assessment | — |
 
-> Row 5 is the first row confirmed against real files in `day3/` — rows 6–8 still describe
-> `day3/`–`day5/` content that doesn't exist yet in this repo, the same caveat the
+> Rows 5–7 are now confirmed against real files in `day3/`–`day4/` — row 8 still describes `day5/`
+> content that doesn't exist yet in this repo, the same caveat the
 > [Module 1](module-01-api-setup-and-secure-integration.md#where-module-1-fits-in-the-course) and
 > [Module 2](module-02-prompt-engineering-for-applications.md#where-module-2-fits-in-the-course)
-> guides flag — worth double-checking again once those folders are built.
+> guides flag — worth double-checking again once that folder is built.
 
 **Reference material:** [`module-04-conversation-and-context-management.md`](module-04-conversation-and-context-management.md)
 (the pipe this module fills) · [`SETUP.md`](../SETUP.md) (environment setup) ·

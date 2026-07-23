@@ -1,7 +1,7 @@
 # Demo 1 — Faithfulness Judge
 
 **Module 7: Evaluation and Output Quality**
-Based on [`day5/eval_rag_assistant.py`](../../../../day5/eval_rag_assistant.py)'s `faithfulness_judge()`.
+Based on [`day4/eval_rag_assistant.py`](../../../../day4/eval_rag_assistant.py)'s `faithfulness_judge()`.
 
 Runs the same faithfulness judge on two candidate answers to one real Apex Bank question: a
 faithful one that only states what the context actually says, and a hallucinated-but-plausible
@@ -34,6 +34,6 @@ uv run faithfulness_judge.py --answer unfaithful
 - The unfaithful answer's `95%` figure is not an obviously wrong number — it's the kind of
   plausible-sounding hallucination a relevance-only check would miss entirely, since the answer
   *is* on-topic and *does* answer the question asked.
-- `parse_judge_json()` is duplicated here from `day5/eval_rag_assistant.py` rather than imported,
+- `parse_judge_json()` is duplicated here from `day4/eval_rag_assistant.py` rather than imported,
   the same way each Module 5/6 demo duplicated a trimmed subset of its reference script instead of
   importing a sibling demo — this stays an independent, standalone project.

@@ -1,7 +1,7 @@
 """
 Faithfulness Judge — LLM-as-judge scoring an answer against its cited context
 Module 7: Evaluation and Output Quality
-Based on: day5/eval_rag_assistant.py (faithfulness_judge)
+Based on: day4/eval_rag_assistant.py (faithfulness_judge)
 
 Faithfulness asks one narrow question: does every factual claim in the ANSWER actually appear in
 the CONTEXT it cites? A plausible-sounding number is not the same thing as a supported one — this
@@ -113,7 +113,7 @@ def main() -> None:
             print()
 
         print("What to log in a real app: question, context id(s), answer, judge score, "
-              "judge reasoning, and the raw judge response for audit — see day5/eval_log.jsonl.")
+              "judge reasoning, and the raw judge response for audit — see day4/eval_log.jsonl.")
     except anthropic.AuthenticationError:
         print("ERROR: Invalid API key — check ANTHROPIC_API_KEY in your .env file.")
         raise SystemExit(1)

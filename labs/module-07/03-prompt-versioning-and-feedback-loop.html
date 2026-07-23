@@ -123,7 +123,7 @@
     code review can quietly remove a safety constraint. Re-running the same golden set against
     both versions — and logging both the automated verdict and a human's confirmation of it — is
     what turns "I think this edit is fine" into a checked fact. Fully offline — this replays a
-    real captured run from <code>day5/eval_rag_assistant.py</code>, it doesn't call Claude.
+    real captured run from <code>day4/eval_rag_assistant.py</code>, it doesn't call Claude.
   </div>
 
   <section>
@@ -158,7 +158,7 @@
 <footer>
   Part of <a href="../../guides/module-07-evaluation-and-output-quality.md">Module 7 — Evaluation
   and Output Quality</a> · Building with Claude ·
-  see this trace as real code in <a href="../../day5/eval_rag_assistant.py">day5/eval_rag_assistant.py</a>
+  see this trace as real code in <a href="../../day4/eval_rag_assistant.py">day4/eval_rag_assistant.py</a>
 </footer>
 
 <script>
@@ -208,7 +208,7 @@
     },
     {
       chip: 'L', kind: 'eval', version: 'v2-defense-clause-removed', regression: 'YES',
-      title: 'log_eval() writes the failure to day5/eval_log.jsonl',
+      title: 'log_eval() writes the failure to day4/eval_log.jsonl',
       explain: 'Every automated verdict is appended as one JSON line — this is what makes the regression checkable later, not just visible in a terminal scroll.',
       code: '{"logged_at": "2026-07-23T09:14:02Z",\n "version": "v2-defense-clause-removed",\n "id": "eval-injection", "safety": {"safe": false, ...}}'
     },

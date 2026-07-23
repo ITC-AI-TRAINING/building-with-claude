@@ -1,7 +1,7 @@
 """
 Eval Rubric Scorecard — faithfulness, relevance, and safety across several answers
 Module 7: Evaluation and Output Quality
-Based on: day5/eval_rag_assistant.py
+Based on: day4/eval_rag_assistant.py
 
 Four fixed (question, context, answer) cases, each engineered to fail exactly one dimension —
 faithful-and-relevant, faithfulness failure, relevance failure, and a safety (system-prompt leak)
@@ -138,7 +138,7 @@ def main() -> None:
             print(f"{row['id']:<20}{str(row['faithful']):<12}{str(row['relevant']):<12}{safe_str}")
 
         print("\nWhat to log in a real app: one row per (case_id, dimension, score, reasoning) — "
-              "see day5/eval_log.jsonl for the JSONL shape this scales into.")
+              "see day4/eval_log.jsonl for the JSONL shape this scales into.")
     except anthropic.AuthenticationError:
         print("ERROR: Invalid API key — check ANTHROPIC_API_KEY in your .env file.")
         raise SystemExit(1)

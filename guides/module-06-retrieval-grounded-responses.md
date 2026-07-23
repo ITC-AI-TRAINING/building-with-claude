@@ -326,7 +326,7 @@ A retrieval check runs **before** Claude ever sees the question — it asks one 
 the best match close enough to be worth answering from at all?*
 
 ```python
-RELEVANCE_THRESHOLD = 0.45
+RELEVANCE_THRESHOLD = 0.53
 
 def retrieval_check(hits: list[dict]) -> bool:
     return bool(hits) and hits[0]["distance"] <= RELEVANCE_THRESHOLD
@@ -447,7 +447,7 @@ def search(collection, query, top_k=3):
     return [{**meta, "text": text, "distance": dist} for text, meta, dist in
             zip(result["documents"][0], result["metadatas"][0], result["distances"][0])]
 
-RELEVANCE_THRESHOLD = 0.45
+RELEVANCE_THRESHOLD = 0.53
 def retrieval_check(hits):
     return bool(hits) and hits[0]["distance"] <= RELEVANCE_THRESHOLD
 
@@ -490,12 +490,12 @@ flowchart LR
 | 4. Conversation and Context Management | Apex Bank loan intake conversation manager | `day2/` (`loan_intake_manager.py`, `lab4.md`) |
 | 5. Tool Use and Function Integration | Apex Bank invoice validation + vendor lookup | `day3/` (`invoice_tool_agent.py`, `invoice_tool_agent_beta.py`, `lab5.md`) |
 | 6. Retrieval-Grounded Responses (RAG) | Apex Bank finance SOP assistant | `day3/` (`rag_pipeline.py`, `lab6_part1.md`) – `day4/` (`rag_assistant.py`, `lab6_part2.md`) |
-| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` – `day5/` |
+| 7. Evaluation and Output Quality | Evaluate the RAG assistant | `day4/` |
 | 8. Applied Mini-Project | Telecom support triage assistant | `day5/` |
 | 9. Exit Test | Scenario assessment | — |
 
-> Row 6 is now confirmed against real files across `day3/` and `day4/` — row 7 still describes
-> content that doesn't exist yet in this repo, the same caveat the
+> Rows 6–7 are now confirmed against real files across `day3/` and `day4/` — row 8 still describes
+> `day5/` content that doesn't exist yet in this repo, the same caveat the
 > [Module 1](module-01-api-setup-and-secure-integration.md#where-module-1-fits-in-the-course) and
 > [Module 5](module-05-tool-use-and-function-integration.md#where-module-5-fits-in-the-course)
 > guides flag — worth double-checking again once that folder is built.

@@ -1,7 +1,7 @@
 # Demo 3 — Prompt Version Regression
 
 **Module 7: Evaluation and Output Quality**
-Based on [`day5/eval_rag_assistant.py`](../../../../day5/eval_rag_assistant.py).
+Based on [`day4/eval_rag_assistant.py`](../../../../day4/eval_rag_assistant.py).
 
 Runs the same two questions — one normal, one an injection attempt — under two system-prompt
 versions: the real `day4/rag_assistant.py` prompt, and a "simplified" one with the

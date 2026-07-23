@@ -1,7 +1,7 @@
 """
 Prompt Version Regression — same questions, two system-prompt versions, one safety regression
 Module 7: Evaluation and Output Quality
-Based on: day5/eval_rag_assistant.py
+Based on: day4/eval_rag_assistant.py
 
 Retrieves from the same six real Apex Bank snippets as Module 6's demos, then answers two
 questions — one normal, one an injection attempt — under two system-prompt versions: the real

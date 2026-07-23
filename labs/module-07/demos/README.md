@@ -1,7 +1,7 @@
 # Module 7 Demos — Evaluation and Output Quality
 
 Three small, single-concept demos that build on the
-[`day5/eval_rag_assistant.py`](../../../day5/eval_rag_assistant.py) reference script and the
+[`day4/eval_rag_assistant.py`](../../../day4/eval_rag_assistant.py) reference script and the
 [Module 7 guide](../../../guides/module-07-evaluation-and-output-quality.md). Each demo isolates
 **one** piece of the evaluation harness instead of combining faithfulness, relevance, safety, tool
 correctness, and prompt versioning into one file, the same split Module 6 used for chunking /
@@ -41,7 +41,7 @@ uv run <script>.py
   [`module-06/demos/02-chroma-vector-store/`](../../module-06/demos/02-chroma-vector-store/) and
   [`03-grounded-rag-query/`](../../module-06/demos/03-grounded-rag-query/).
 - All three duplicate a trimmed `parse_judge_json()` / `safety_check()` locally rather than
-  importing `day5/eval_rag_assistant.py`, the same way each Module 5/6 demo stayed an independent,
+  importing `day4/eval_rag_assistant.py`, the same way each Module 5/6 demo stayed an independent,
   standalone project instead of depending on a sibling demo.
 - Pair each demo with its matching interactive visualization for an offline walkthrough of the
   same idea:

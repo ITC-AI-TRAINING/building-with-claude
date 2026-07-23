@@ -1,7 +1,7 @@
 # Demo 2 — Eval Rubric Scorecard
 
 **Module 7: Evaluation and Output Quality**
-Based on [`day5/eval_rag_assistant.py`](../../../../day5/eval_rag_assistant.py).
+Based on [`day4/eval_rag_assistant.py`](../../../../day4/eval_rag_assistant.py).
 
 Four fixed `(question, context, answer)` cases, each engineered to fail exactly **one** rubric
 dimension, scored across all three and printed as a scorecard — the shape a real eval dashboard
