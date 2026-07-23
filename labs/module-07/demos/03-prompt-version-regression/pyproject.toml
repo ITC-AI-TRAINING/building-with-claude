@@ -1,0 +1,12 @@
+[project]
+name = "prompt-version-regression"
+version = "0.1.0"
+description = "Module 7 demo — same questions run under two system-prompt versions, one with a dropped injection-defense clause, showing a safety regression side by side (based on day5/eval_rag_assistant.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.69,<1.0",
+    "openai>=1.30",
+    "chromadb>=0.5",
+    "python-dotenv>=1.0",
+]

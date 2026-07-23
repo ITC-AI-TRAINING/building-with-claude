@@ -1,0 +1,10 @@
+[project]
+name = "faithfulness-judge"
+version = "0.1.0"
+description = "Module 7 demo — LLM-as-judge faithfulness scoring, faithful vs. hallucinated answer (based on day5/eval_rag_assistant.py)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.69,<1.0",
+    "python-dotenv>=1.0",
+]

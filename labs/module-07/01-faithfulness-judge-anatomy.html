@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faithfulness Judge Anatomy | Building with Claude</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --teal:#00695c; --teal-mid:#00796b; --teal-lite:#26a69a; --teal-glow:rgba(0,105,92,.20);
+    --bg:#0e0e10; --surface:#18181c; --surface2:#202026; --border:#2a2a32;
+    --text:#e8e8ee; --text-dim:#8a8a9a; --text-muted:#55555f; --code-bg:#141418;
+    --green:#4caf50; --green-bg:rgba(76,175,80,.12);
+    --red:#ef5350; --red-bg:rgba(239,83,80,.12);
+    --amber:#ffb300; --amber-bg:rgba(255,179,0,.14);
+    --m1:#1565c0;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+    --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f3; --border:#dfe0e5;
+      --text:#1b1b1f; --text-dim:#5b5c66; --text-muted:#8a8b94; --code-bg:#eef0f2;
+    }
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.6; font-size:15px}
+
+  #hdr{position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 85%, transparent);
+       backdrop-filter:blur(14px); border-bottom:1px solid var(--border)}
+  .hdr-inner{max-width:980px; margin:0 auto; padding:14px 24px; display:flex; align-items:center;
+             justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .hdr-title{display:flex; align-items:center; gap:10px}
+  .badge{background:var(--m1); color:#fff; font-size:.68rem; font-weight:700; padding:3px 9px;
+         border-radius:99px; letter-spacing:.03em}
+  .hdr-title h1{font-size:1.05rem; color:var(--teal-lite); font-weight:700}
+  .hdr-title p{font-size:.76rem; color:var(--text-dim); margin-top:1px}
+  #theme-toggle{background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:7px 12px; font-size:.78rem; cursor:pointer}
+  #theme-toggle:hover{border-color:var(--teal-lite)}
+
+  main{max-width:980px; margin:0 auto; padding:28px 24px 90px}
+  .intro{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--teal-mid);
+         border-radius:8px; padding:16px 20px; font-size:.88rem; color:var(--text-dim); margin-bottom:28px}
+  .intro strong{color:var(--text)}
+
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .sec-head h2{font-size:1.15rem; color:var(--text)}
+  .sec-num{background:var(--teal); color:#fff; width:26px; height:26px; border-radius:50%;
+           display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0}
+  .sec-sub{font-size:.82rem; color:var(--text-dim); margin-bottom:18px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px}
+
+  button.btn{background:var(--teal-mid); color:#fff; border:none; border-radius:8px; padding:9px 16px;
+             font-size:.85rem; font-weight:600; cursor:pointer; transition:background .15s}
+  button.btn:hover{background:var(--teal-lite)}
+  button.btn.secondary{background:var(--surface2); color:var(--text); border:1px solid var(--border)}
+  button.btn.secondary:hover{border-color:var(--teal-lite)}
+  button.btn.danger{background:#b71c1c}
+  button.btn.danger:hover{background:#c62828}
+
+  pre.code{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; overflow-x:auto;
+           line-height:1.6; white-space:pre-wrap; word-break:break-word}
+
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr}}
+  .compare-card{border-radius:10px; padding:18px; border:1px solid var(--border); background:var(--code-bg)}
+  .compare-card.bad{border-color:rgba(239,83,80,.4)}
+  .compare-card.good{border-color:rgba(76,175,80,.4)}
+  .compare-title{font-size:.85rem; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .compare-title.bad{color:var(--red)}
+  .compare-title.good{color:var(--green)}
+  .result-box{margin-top:14px; border-radius:8px; padding:12px 14px; font-size:.78rem; display:none}
+  .result-box.show{display:block; animation:fadein .3s ease}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)}}
+  .result-box.leak{background:var(--red-bg); border:1px solid rgba(239,83,80,.4); color:var(--red)}
+  .result-box.safe{background:var(--green-bg); border:1px solid rgba(76,175,80,.4); color:var(--green)}
+  .query-box{background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;
+             font-size:.83rem; margin-bottom:16px}
+  .query-box b{color:var(--teal-lite)}
+
+  .field-grid{display:flex; flex-direction:column; gap:8px; margin-bottom:16px}
+  .field-row{
+    cursor:pointer; padding:10px 14px; border-radius:8px; background:var(--surface2);
+    border:1px solid var(--border); font-size:.85rem; transition:all .15s;
+    display:flex; justify-content:space-between; gap:10px; align-items:center;
+  }
+  .field-row:hover, .field-row.on{background:var(--teal-glow); border-color:var(--teal-lite); color:var(--teal-lite)}
+  .field-row .tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.72rem; color:var(--text-muted)}
+  .field-row.on .tag{color:var(--teal-lite)}
+  .field-desc{
+    background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
+    padding:14px 16px; font-size:.82rem; color:var(--text-dim); min-height:56px;
+  }
+  .field-desc b{color:var(--teal-lite)}
+
+  footer{max-width:980px; margin:0 auto; padding:0 24px 60px; font-size:.76rem; color:var(--text-muted)}
+  footer a{color:var(--teal-lite); text-decoration:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">
+      <span class="badge">MODULE 7</span>
+      <div>
+        <h1>Faithfulness Judge Anatomy</h1>
+        <p>Building with Claude — Evaluation and Output Quality</p>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 / ☀️</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why this matters:</strong> A retrieval check (Module 6) only asks whether something
+    relevant was found — it can't tell you whether the generated answer actually says what its
+    cited chunk supports. Faithfulness needs a second Claude call that reads both and judges
+    whether they agree. Everything below is fully offline — nothing sends a real request.
+  </div>
+
+  <!-- ══════════════ SECTION 1 — plausible vs. faithful ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>Plausible is not the same as faithful</h2></div>
+    <p class="sec-sub">Both answers below cite <code>[policy-0]</code> and sound equally confident.
+      Click <strong>Judge this answer</strong> on each to see what the faithfulness judge actually
+      catches.</p>
+
+    <div class="query-box">Context <b>[policy-0]</b>: "Maximum loan-to-value ratio for home loans
+      is 90% up to INR 30 lakhs, 80% between 30 and 75 lakhs, and 75% above 75 lakhs."<br>
+      Question: <b>"What is the maximum loan-to-value ratio for home loans?"</b></div>
+
+    <div class="compare-grid">
+      <div class="compare-card good">
+        <div class="compare-title good">✅ Faithful answer</div>
+        <pre class="code">"The maximum LTV for home
+  loans is 90% up to INR 30
+  lakhs, 80% between 30 and 75
+  lakhs, and 75% above 75 lakhs
+  [policy-0]."</pre>
+        <button class="btn secondary" onclick="judge('faithful')">Judge this answer</button>
+        <div class="result-box safe" id="result-faithful">
+          ✅ <strong>score: 1</strong> — every number in the answer traces directly to the cited
+          chunk's text; nothing invented.
+        </div>
+      </div>
+
+      <div class="compare-card bad">
+        <div class="compare-title bad">❌ Hallucinated answer</div>
+        <pre class="code">"The maximum LTV for home
+  loans is 95%, regardless of
+  loan amount [policy-0]."</pre>
+        <button class="btn danger" style="background:#b71c1c" onclick="judge('hallucinated')">Judge this answer</button>
+        <div class="result-box leak" id="result-hallucinated">
+          🚨 <strong>score: 0 — unsupported_claims: ["95% regardless of loan amount"]</strong> —
+          the cited chunk gives three tiered percentages, none of them 95%. The citation tag is
+          present and correctly formatted; the number behind it is simply not there. A
+          relevance-only check would have passed this answer.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECTION 2 — anatomy of the judge prompt ══════════════ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>Anatomy of a faithfulness judge call</h2></div>
+    <p class="sec-sub">Click each field to see what it's for — the same three-part shape as any
+      other Claude request, pointed at a different job.</p>
+
+    <div class="card">
+      <div class="field-grid" id="field-rows"></div>
+      <div class="field-desc" id="field-desc">👆 Click a field above to see its role.</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Part of <a href="../../guides/module-07-evaluation-and-output-quality.md">Module 7 — Evaluation
+  and Output Quality</a> · Building with Claude ·
+  see the real code in <a href="../../day5/eval_rag_assistant.py">day5/eval_rag_assistant.py</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Section 1 ─────────────────────────────────────────────────────────
+  function judge(kind){
+    document.getElementById('result-' + kind).classList.add('show');
+  }
+
+  // ── Section 2 ─────────────────────────────────────────────────────────
+  const FIELDS = [
+    {
+      tag: 'CONTEXT',
+      label: 'The retrieved chunk(s), verbatim',
+      desc: 'The exact same numbered CONTEXT block build_context() produced for the original ' +
+            'answer — the judge needs the same source text the assistant had, not a summary of it.'
+    },
+    {
+      tag: 'QUESTION',
+      label: 'The original question',
+      desc: 'Needed so the judge can tell a faithfulness failure ("claims something the context ' +
+            'doesn\'t say") apart from a relevance failure ("answers a different question") — ' +
+            'without it the judge can\'t distinguish the two failure modes.'
+    },
+    {
+      tag: 'ANSWER',
+      label: 'The candidate answer being judged',
+      desc: 'The output of day4/rag_assistant.py\'s answer_question() — this is the thing under ' +
+            'test, never the judge\'s own future output.'
+    },
+    {
+      tag: 'RESPONSE FORMAT',
+      label: '"Respond with ONLY a JSON object..."',
+      desc: 'A structured-output instruction (Module 3\'s discipline, reused) — {"score": 0 or 1, ' +
+            '"unsupported_claims": [...], "reasoning": "..."}. Judges wrap this in markdown fences ' +
+            'anyway more often than not — parse_judge_json() strips fences first, then falls back ' +
+            'to a bare {...} match, then to a {"score": 0, "reasoning": "parse error: ..."} shape.'
+    },
+  ];
+
+  function renderFields(){
+    const box = document.getElementById('field-rows');
+    box.innerHTML = '';
+    FIELDS.forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      row.innerHTML = `<span>${f.label}</span><span class="tag">${f.tag}</span>`;
+      row.onclick = () => {
+        document.querySelectorAll('.field-row').forEach(r => r.classList.remove('on'));
+        row.classList.add('on');
+        document.getElementById('field-desc').innerHTML = `<b>${f.tag}</b> — ${f.desc}`;
+      };
+      box.appendChild(row);
+    });
+  }
+
+  renderFields();
+</script>
+</body>
+</html>
