@@ -87,7 +87,7 @@ explain in your own words what would break if it were removed:
 `retrieval_check()` is a relevance gate that runs *before* Claude ever sees the question:
 
 ```python
-RELEVANCE_THRESHOLD = 0.45
+RELEVANCE_THRESHOLD = 0.53
 
 def retrieval_check(hits: list[dict]) -> bool:
     return bool(hits) and hits[0]["distance"] <= RELEVANCE_THRESHOLD
@@ -151,7 +151,7 @@ don't actually contain the answer. Does it:
   failure — this is exactly what Module 7's faithfulness judge is built to catch), or
 - Correctly notice the context doesn't answer the question and fall back despite the loose gate?
 
-Put `RELEVANCE_THRESHOLD` back to `0.45` before moving on. This exercise is why Module 6 teaches
+Put `RELEVANCE_THRESHOLD` back to `0.53` before moving on. This exercise is why Module 6 teaches
 *two* layers — a cheap distance-based retrieval check here, and a full LLM-as-judge faithfulness
 check in Module 7 — rather than relying on either alone.
 

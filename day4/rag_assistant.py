@@ -35,7 +35,13 @@ TOP_K = 3
 # chunk is farther than this, the question is probably not covered by the
 # indexed documents — refuse rather than let Claude guess. Tune against your
 # own corpus and query traffic; this is a starting point, not a proven cutoff.
-RELEVANCE_THRESHOLD = 0.45
+# Measured on this corpus/embedding model: on-topic golden-set queries land
+# at 0.48-0.53, the off-topic one at 0.532 — 0.45 rejected everything,
+# including questions the documents genuinely answer. The gap between the two
+# groups is thin (this corpus is only 5 chunks), which is itself the lesson:
+# a distance gate alone is a coarse filter, which is why Module 7 backs it
+# with an LLM-as-judge faithfulness check instead of relying on this alone.
+RELEVANCE_THRESHOLD = 0.53
 
 NO_CONTEXT_FALLBACK = (
     "I don't have enough information in the indexed documents to answer that."
