@@ -1,0 +1,10 @@
+[project]
+name = "server-side-compaction"
+version = "0.1.0"
+description = "Module 4 demo — runs the same scripted loan intake conversation as 02-token-aware-summarization/, but via the beta compact-2026-01-12 server-side compaction feature instead of a manual summarise-and-reset"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.117.0",
+    "python-dotenv>=1.2.2",
+]

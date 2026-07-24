@@ -17,6 +17,8 @@ claude_outputs/
 .cache/
 day3/vector_index.json
 day5/eval_logs/
+eval_log.*
+chroma_db/
 
 # LibreOffice lock files
 .~lock.*#
@@ -37,6 +39,11 @@ solutions/
 
 # Case study Word documents (binary deliverables, tracked separately)
 case_studies/*.docx
+
+# Presentation files — instructor reference, not for students
+presentations/
+screenshots/
+ref/
 
 # Claude Code configuration — contains repo-specific AI guidance
 CLAUDE.md
